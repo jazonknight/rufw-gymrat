@@ -9,6 +9,8 @@ import (
 var MaxUnitValues = map[UnitType]int{
 	"seconds": 360,
 	"count":   30,
+	"sets":    5,
+	"effort":  10,
 }
 
 type FormationType string

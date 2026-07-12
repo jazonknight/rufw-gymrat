@@ -13,19 +13,21 @@ import (
 	"github.com/google/uuid"
 )
 
-// WorkoutSessionsPlans
-func ShowWorkoutSessionsPlansCLI(workoutPlans []models.Plan) {
+var maxUnitValues = models.MaxUnitValues // var to map constants
 
-	fmt.Println("Workout Session Plans : ")
+// WorkoutSessionsPlans
+func ShowWorkoutPlansCLI(workoutPlans []models.Plan) {
+
+	fmt.Println("Workout Plans : ")
 	for i, wp := range workoutPlans {
 
-		fmt.Printf("Session Sequence: %d | Session Data: + %+v\n", i, wp)
+		fmt.Printf("Workout Sequence: %d | Workout Data: + %+v\n", i+1, wp)
 	}
 }
 
 func ShowWorkoutPlanCLI(workoutPlan models.Plan) {
 
-	fmt.Println("Workout Session Plan : ")
+	fmt.Println("Workout Plan : ")
 	fmt.Printf("Plan Data: + %+v\n", workoutPlan)
 
 }
@@ -78,10 +80,61 @@ func GetMeAValidMaxValue(str string, isZeroAllowed bool, maxAllowed int) (int, e
 	return newIntValue, nil
 }
 
-// define map of max units
-var maxUnitValues = map[string]int{
-	"seconds": 360,
-	"count":   30,
+func GetSetInput(setInput *models.ExerciseSet) error {
+
+	// ask for reps
+	reps, err := GetNumberOfReps(setInput.FrequencyUnit)
+	if err != nil {
+		return err
+	}
+	setInput.RepCount = reps
+
+	// ask for effort
+	effort, err := GetPreceivedEffort()
+	if err != nil {
+		return err
+	}
+	setInput.PerceivedEffort = effort
+
+	return nil
+}
+
+func GetPreceivedEffort() (int, error) {
+
+	fmt.Printf("Please input the level of Preceived effort for this set (0-%d):>",
+		maxUnitValues[models.UnitType("effort")])
+
+	inputChoiceEffort, err := ReadLine()
+	if err != nil {
+		return 0, err
+	}
+	effortCount, err := strconv.Atoi(inputChoiceEffort)
+	if err != nil {
+		return 0, err
+	}
+
+	return effortCount, nil
+}
+
+func GetNumberOfReps(freqUnit string) (int, error) {
+
+	fmt.Printf("Please input the number of Reps for this set max allowed (1-%d):>",
+		maxUnitValues[models.UnitType(freqUnit)])
+	inputChoiceReps, err := ReadLine()
+	if err != nil {
+		return 0, err
+	}
+
+	repCount, err := strconv.Atoi(inputChoiceReps)
+	if err != nil {
+		return 0, err
+	}
+
+	if repCount < 1 {
+		return 0, errors.New("reps must be at least 1 or more")
+	}
+
+	return repCount, nil
 }
 
 func GetFreqUnit() (string, error) {
@@ -127,7 +180,7 @@ func GetMaxPerUnit(str string) (int, error) {
 		}
 	*/
 
-	if maxValue, exists := maxUnitValues[str]; exists {
+	if maxValue, exists := maxUnitValues[models.UnitType(str)]; exists {
 		return maxValue, nil
 	}
 
@@ -165,7 +218,7 @@ func AddWorkoutToPlanCLI(vault *models.GymRatVaultData) error {
 	fmt.Printf("Plan Description Added successfully: %s\n", planInDraft.Description)
 
 	// Get the number of excercises in this workout
-	fmt.Printf("\n How many exercises are in this plan?: ")
+	fmt.Printf("\n How many exercises are in this plan?:>")
 	countOfExercises, err := ReadLine()
 	if err != nil {
 		return err
@@ -173,7 +226,7 @@ func AddWorkoutToPlanCLI(vault *models.GymRatVaultData) error {
 
 	countExercises, err := strconv.Atoi(countOfExercises)
 	if err != nil {
-		fmt.Println("Error | Please type a valid whole number.")
+		fmt.Println("error: please type a valid whole number.")
 		return err
 	}
 
@@ -188,7 +241,7 @@ func AddWorkoutToPlanCLI(vault *models.GymRatVaultData) error {
 		}
 
 		// ask for each exercise details
-		fmt.Printf("Lets add details for exercise #%d\n", e)
+		fmt.Printf("Please Input the #%d exercise name:>", e+1)
 
 		//ask for the exercise name
 		exerciseName, err := ReadLine()
@@ -205,15 +258,15 @@ func AddWorkoutToPlanCLI(vault *models.GymRatVaultData) error {
 		}
 
 		//Ask how many work out sets for this exercise
-		fmt.Println("How many sets do you want to do for this exercise?")
-		fmt.Printf("Input the number of Sets for exercise (%s) range (1-%d) :>", exerciseName, maxUnitValues[setUnit])
+		fmt.Printf("Input the number of Sets for exercise (%s) range and max (1-%d) :>", exerciseName, maxUnitValues[models.UnitType("sets")])
 		numOfWorkoutSets, err := ReadLine()
 		if err != nil {
 			return err
 		}
 
 		//max number of sets
-		countOfWorkOutSets, err := GetMeAValidMaxValue(numOfWorkoutSets, false, 5) // no more then 5 sets allowed
+		countOfWorkOutSets, err :=
+			GetMeAValidMaxValue(numOfWorkoutSets, false, maxUnitValues[models.UnitType("sets")]) // no more then 5 sets allowed
 		if err != nil {
 			return err
 		}
@@ -227,11 +280,13 @@ func AddWorkoutToPlanCLI(vault *models.GymRatVaultData) error {
 				FrequencyUnit: setUnit, // each set is the same unit
 			}
 
-			// loop through the set lets say set 0 = s+1
-			fmt.Printf("About to enter details for set number:%d/%d", s, countOfWorkOutSets)
-			fmt.Printf("\nEnter the number of reps for set number:%d/%d max allowed: %d rep count:>",
-				s+1, countOfWorkOutSets, maxUnitValues[plannedSet.FrequencyUnit])
-			// ask for the number of reps in this set
+			fmt.Printf("About to enter details for set number:%d/%d\n", s+1, countOfWorkOutSets)
+
+			// ask for set details from user
+			err := GetSetInput(&plannedSet)
+			if err != nil {
+				return err
+			}
 
 			// add the planned set to the main workout sets
 			workoutSets = append(workoutSets, plannedSet)
@@ -274,7 +329,7 @@ func MenuCLI(vault *models.GymRatVaultData, dir string, filename string) error {
 
 		switch choice {
 		case "1":
-			ShowWorkoutSessionsPlansCLI(vault.WorkoutPlans)
+			ShowWorkoutPlansCLI(vault.WorkoutPlans)
 		case "2":
 
 			fmt.Printf("Enter Plan search criteria i.e Id or Name:>")
