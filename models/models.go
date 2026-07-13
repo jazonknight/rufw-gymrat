@@ -40,10 +40,10 @@ type Exercise struct {
 
 type ExerciseSet struct {
 	Id              string
-	RepCount        int     // 10 count or 60 seconds
-	FrequencyUnit   string  // seconds / count
-	Weight          float32 // 34 or 35.6
-	PerceivedEffort int     // 1 to 10 with 1 being easy and 10 being extremely difficult
+	RepCount        int      // 10 count or 60 seconds
+	FrequencyUnit   UnitType // seconds / count
+	Weight          float32  // 34 or 35.6
+	PerceivedEffort int      // 1 to 10 with 1 being easy and 10 being extremely difficult
 }
 
 // History
