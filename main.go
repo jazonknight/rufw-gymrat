@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
-
-	//"time"
 	"gymrat/cmd"
 	"gymrat/models" // Double check that this matches your go.mod module name
+	"os"
 )
 
 func main() {
