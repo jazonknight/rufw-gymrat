@@ -66,7 +66,7 @@ go test -v ./...
 
 Build the compiled executable binary:
 ```bash
-go build -o gymrat main.go storage.go
+go build -o gymrat main.go
 ```
 
 ---
@@ -76,7 +76,7 @@ go build -o gymrat main.go storage.go
 ### 1. Interactive Terminal CLI Mode (Default)
 Run GymRat directly in your terminal:
 ```bash
-go run main.go storage.go
+go run main.go
 ```
 Or run the binary:
 ```bash
@@ -99,7 +99,7 @@ Or run the binary:
 ### 2. REST Server & Web UI Dashboard Mode
 Launch the HTTP server and serve the Web Client:
 ```bash
-go run main.go storage.go -server -port 8080
+go run main.go -server -port 8080
 ```
 Or run the binary with flags:
 ```bash
@@ -114,6 +114,27 @@ Once running, open your web browser to:
 * **Exercise Catalog**: Interactive card grid displaying version tags, category filters, soft-deleted status, and version bump modals.
 * **Workout Plans**: Visual builder for creating plans, adding workouts with Reps or Timed sets, and marking workouts executed.
 * **Import / Export**: Drag and drop exported `gymrat_vault.json` bundles to import data, or click "Export JSON" to download your current snapshot.
+
+---
+
+### 3. Docker & Docker Compose Deployment 🐳
+
+GymRat can be containerized using the included multi-stage `Dockerfile` and `docker-compose.yml`.
+
+#### Quick Launch:
+```bash
+docker compose up -d --build
+```
+
+#### Key Container Configurations (`.env` or Environment Variables):
+* `PORT`: Host port mapping (e.g. `8080` or `9090`).
+* `DOMAIN_NAME`: Domain name used for Traefik or Nginx reverse proxy routing (e.g. `gymrat.local` or `gymrat.mydomain.com`).
+* `SESSIONS_DIR`: Target directory path for session JSON data (`/app/data/sessions`).
+* `WEB_DIR`: Path to static web UI files (`/app/web`).
+* `SERVER_MODE`: Set to `true` to auto-start REST API & Web UI on boot.
+
+#### Data Persistence:
+A volume mapping (`./data:/app/data`) is configured in `docker-compose.yml` to preserve all session JSON files across container updates and restarts.
 
 ---
 

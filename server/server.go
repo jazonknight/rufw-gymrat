@@ -19,17 +19,22 @@ import (
 
 // Server configures and runs the HTTP server instance.
 type Server struct {
-	SessionMgr *storage.SessionManager // Workspace session manager
-	WebDir     string                  // Path to static web UI files
-	Port       string                  // TCP port to listen on
+	SessionMgr   *storage.SessionManager // Workspace session manager
+	WebDir       string                  // Path to static web UI files
+	Port         string                  // TCP port to listen on
+	MaxPayloadMB int                     // Max upload request payload size in MB
 }
 
 // NewServer initializes a new REST API Server.
-func NewServer(sm *storage.SessionManager, webDir string, port string) *Server {
+func NewServer(sm *storage.SessionManager, webDir string, port string, maxPayloadMB int) *Server {
+	if maxPayloadMB <= 0 {
+		maxPayloadMB = 5 // Default 5 MB
+	}
 	return &Server{
-		SessionMgr: sm,
-		WebDir:     webDir,
-		Port:       port,
+		SessionMgr:   sm,
+		WebDir:       webDir,
+		Port:         port,
+		MaxPayloadMB: maxPayloadMB,
 	}
 }
 
@@ -81,6 +86,13 @@ func (s *Server) getSessionId(r *http.Request) (string, error) {
 		sessionId = r.URL.Query().Get("sessionId")
 	}
 
+	if sessionId != "" {
+		// Validate UUID format to prevent path traversal
+		if _, err := uuid.Parse(sessionId); err != nil {
+			return "", fmt.Errorf("invalid session ID format: %w", err)
+		}
+	}
+
 	if sessionId == "" {
 		// Default session or auto-create
 		var err error
@@ -91,8 +103,10 @@ func (s *Server) getSessionId(r *http.Request) (string, error) {
 	} else if !s.SessionMgr.SessionExists(sessionId) {
 		// Create session directory if requested ID doesn't exist yet
 		dir := s.SessionMgr.GetSessionDir(sessionId)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return "", err
+		if s.SessionMgr.StorageMode == "disk" {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return "", err
+			}
 		}
 	}
 
@@ -361,9 +375,13 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Restrict upload body size to configured MaxPayloadMB to prevent RAM exhaustion DoS
+	maxBytes := int64(s.MaxPayloadMB) << 20
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Failed to read request body or payload exceeds %dMB limit", s.MaxPayloadMB), http.StatusBadRequest)
 		return
 	}
 

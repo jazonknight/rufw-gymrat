@@ -3,6 +3,7 @@
 package storage
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +21,31 @@ const (
 	DefaultExercisesFilename = "exercises.json"
 	// DefaultPlansFilename is the standard JSON file name for storing workout plans and workouts.
 	DefaultPlansFilename = "gymrat_plans.json"
+	// DefaultSeedFilename is the immutable starter exercise catalog file checked into Git.
+	DefaultSeedFilename = "default_exercises.json"
 )
+
+//go:embed default_exercises.json
+var embeddedDefaultExercises []byte
+
+// LoadDefaultSeedCatalog loads the default exercise catalog from a specified JSON file path
+// or falls back to the embedded default_exercises.json file.
+func LoadDefaultSeedCatalog(seedFilePath string) models.ExerciseCatalogData {
+	var catalog models.ExerciseCatalogData
+
+	if seedFilePath != "" {
+		bytes, err := os.ReadFile(seedFilePath)
+		if err == nil {
+			if err := json.Unmarshal(bytes, &catalog); err == nil && len(catalog.Exercises) > 0 {
+				return catalog
+			}
+		}
+	}
+
+	// Load from embedded standalone default_exercises.json file
+	_ = json.Unmarshal(embeddedDefaultExercises, &catalog)
+	return catalog
+}
 
 // SaveExercises serializes and writes the exercise catalog to exercises.json in the specified directory.
 func SaveExercises(dir string, filename string, catalog models.ExerciseCatalogData) error {
@@ -38,7 +63,6 @@ func SaveExercises(dir string, filename string, catalog models.ExerciseCatalogDa
 }
 
 // LoadExercises reads and unmarshals the exercise catalog from exercises.json.
-// Returns an empty catalog struct if the target file does not yet exist.
 func LoadExercises(dir string, filename string) (models.ExerciseCatalogData, error) {
 	var catalog models.ExerciseCatalogData
 	fullPath := filepath.Join(dir, filename)
@@ -46,7 +70,6 @@ func LoadExercises(dir string, filename string) (models.ExerciseCatalogData, err
 	bytes, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Return empty catalog if file does not exist yet
 			return models.ExerciseCatalogData{Exercises: []models.Exercise{}}, nil
 		}
 		return catalog, err
@@ -76,7 +99,6 @@ func SaveVault(dir string, filename string, vault models.GymRatVaultData) error 
 }
 
 // LoadVault reads and unmarshals the plans and workouts vault from gymrat_plans.json.
-// Returns an empty vault struct if the file does not yet exist.
 func LoadVault(dir string, filename string) (models.GymRatVaultData, error) {
 	var vault models.GymRatVaultData
 	fullPath := filepath.Join(dir, filename)
@@ -84,7 +106,6 @@ func LoadVault(dir string, filename string) (models.GymRatVaultData, error) {
 	bytes, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Return empty vault if file does not exist yet
 			return models.GymRatVaultData{WorkoutPlans: []models.Plan{}}, nil
 		}
 		return vault, err
@@ -105,41 +126,68 @@ type CombinedSessionBundle struct {
 	Vault     models.GymRatVaultData     `json:"vault"`
 }
 
-// SessionManager manages per-session isolated workspaces under BaseDir using thread-safe synchronization.
+// SessionManager manages per-session isolated workspaces using thread-safe in-memory storage.
 type SessionManager struct {
-	BaseDir string
-	mu      sync.RWMutex
+	BaseDir        string
+	DefaultCatalog models.ExerciseCatalogData
+	StorageMode    string // "memory" (default, 0 disk writes) or "disk"
+	sessions       map[string]*CombinedSessionBundle
+	mu             sync.RWMutex
 }
 
-// NewSessionManager initializes a new SessionManager with the target root directory.
-func NewSessionManager(baseDir string) (*SessionManager, error) {
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		return nil, err
+// NewSessionManager initializes a new SessionManager with target base directory, seed file path, and storage mode.
+func NewSessionManager(baseDir string, seedFilePath string, storageMode string) (*SessionManager, error) {
+	if storageMode == "" {
+		storageMode = "memory"
 	}
-	return &SessionManager{BaseDir: baseDir}, nil
+
+	if storageMode == "disk" {
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return nil, err
+		}
+	}
+
+	seedCatalog := LoadDefaultSeedCatalog(seedFilePath)
+
+	return &SessionManager{
+		BaseDir:        baseDir,
+		DefaultCatalog: seedCatalog,
+		StorageMode:    storageMode,
+		sessions:       make(map[string]*CombinedSessionBundle),
+	}, nil
 }
 
-// CreateSession generates a unique Session ID and initializes default session JSON files.
+// CreateSession generates a unique Session ID and seeds a copy of the default exercise catalog into RAM.
 func (sm *SessionManager) CreateSession() (string, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
 	sessionId := uuid.NewString()
-	dir := sm.GetSessionDir(sessionId)
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
+	// Deep copy default exercise catalog so session edits do not alter the master default seed
+	seedExercisesCopy := make([]models.Exercise, len(sm.DefaultCatalog.Exercises))
+	copy(seedExercisesCopy, sm.DefaultCatalog.Exercises)
+
+	bundle := &CombinedSessionBundle{
+		SessionId: sessionId,
+		Exercises: models.ExerciseCatalogData{Exercises: seedExercisesCopy},
+		Vault:     models.GymRatVaultData{WorkoutPlans: []models.Plan{}},
 	}
 
-	// Initialize default empty files
-	emptyCatalog := models.ExerciseCatalogData{Exercises: []models.Exercise{}}
-	emptyVault := models.GymRatVaultData{WorkoutPlans: []models.Plan{}}
+	sm.sessions[sessionId] = bundle
 
-	if err := SaveExercises(dir, DefaultExercisesFilename, emptyCatalog); err != nil {
-		return "", err
-	}
-	if err := SaveVault(dir, DefaultPlansFilename, emptyVault); err != nil {
-		return "", err
+	// If storageMode is "disk", also persist session files to disk
+	if sm.StorageMode == "disk" {
+		dir := sm.GetSessionDir(sessionId)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return "", err
+		}
+		if err := SaveExercises(dir, DefaultExercisesFilename, bundle.Exercises); err != nil {
+			return "", err
+		}
+		if err := SaveVault(dir, DefaultPlansFilename, bundle.Vault); err != nil {
+			return "", err
+		}
 	}
 
 	return sessionId, nil
@@ -150,49 +198,75 @@ func (sm *SessionManager) GetSessionDir(sessionId string) string {
 	return filepath.Join(sm.BaseDir, sessionId)
 }
 
-// SessionExists checks whether a directory exists for the given Session ID.
+// SessionExists checks whether a session exists in memory (or on disk if storageMode == "disk").
 func (sm *SessionManager) SessionExists(sessionId string) bool {
-	dir := sm.GetSessionDir(sessionId)
-	info, err := os.Stat(dir)
-	return err == nil && info.IsDir()
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	if _, exists := sm.sessions[sessionId]; exists {
+		return true
+	}
+
+	if sm.StorageMode == "disk" {
+		dir := sm.GetSessionDir(sessionId)
+		info, err := os.Stat(dir)
+		return err == nil && info.IsDir()
+	}
+
+	return false
 }
 
-// LoadSession reads and returns the exercise catalog and plans vault for the specified session ID.
+// LoadSession reads and returns the exercise catalog and plans vault for the specified session ID from RAM.
 func (sm *SessionManager) LoadSession(sessionId string) (models.ExerciseCatalogData, models.GymRatVaultData, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	dir := sm.GetSessionDir(sessionId)
-	if !sm.SessionExists(sessionId) {
+	bundle, exists := sm.sessions[sessionId]
+	if !exists {
+		if sm.StorageMode == "disk" && sm.SessionExists(sessionId) {
+			dir := sm.GetSessionDir(sessionId)
+			cat, err := LoadExercises(dir, DefaultExercisesFilename)
+			if err != nil {
+				return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
+			}
+			vault, err := LoadVault(dir, DefaultPlansFilename)
+			if err != nil {
+				return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
+			}
+			return cat, vault, nil
+		}
 		return models.ExerciseCatalogData{}, models.GymRatVaultData{}, errors.New("session not found")
 	}
 
-	cat, err := LoadExercises(dir, DefaultExercisesFilename)
-	if err != nil {
-		return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
-	}
-
-	vault, err := LoadVault(dir, DefaultPlansFilename)
-	if err != nil {
-		return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
-	}
-
-	return cat, vault, nil
+	return bundle.Exercises, bundle.Vault, nil
 }
 
-// SaveSession saves updated catalog and vault data into the session's workspace.
+// SaveSession updates the catalog and vault data for a session in memory (and disk if storageMode == "disk").
 func (sm *SessionManager) SaveSession(sessionId string, cat models.ExerciseCatalogData, vault models.GymRatVaultData) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	dir := sm.GetSessionDir(sessionId)
-	if err := SaveExercises(dir, DefaultExercisesFilename, cat); err != nil {
-		return err
+	bundle, exists := sm.sessions[sessionId]
+	if !exists {
+		bundle = &CombinedSessionBundle{SessionId: sessionId}
+		sm.sessions[sessionId] = bundle
 	}
-	return SaveVault(dir, DefaultPlansFilename, vault)
+
+	bundle.Exercises = cat
+	bundle.Vault = vault
+
+	if sm.StorageMode == "disk" {
+		dir := sm.GetSessionDir(sessionId)
+		if err := SaveExercises(dir, DefaultExercisesFilename, cat); err != nil {
+			return err
+		}
+		return SaveVault(dir, DefaultPlansFilename, vault)
+	}
+
+	return nil
 }
 
-// ExportSession serializes a session's exercises and plans into a combined JSON byte slice payload.
+// ExportSession serializes a session's in-memory exercises and plans into a combined JSON byte slice payload.
 func (sm *SessionManager) ExportSession(sessionId string) ([]byte, error) {
 	cat, vault, err := sm.LoadSession(sessionId)
 	if err != nil {
@@ -208,7 +282,7 @@ func (sm *SessionManager) ExportSession(sessionId string) ([]byte, error) {
 	return json.MarshalIndent(bundle, "", "  ")
 }
 
-// ImportSession parses a JSON payload and overwrites the session workspace with the imported data.
+// ImportSession parses a JSON payload and overwrites the session's in-memory state with the imported data.
 func (sm *SessionManager) ImportSession(sessionId string, data []byte) error {
 	var bundle CombinedSessionBundle
 	if err := json.Unmarshal(data, &bundle); err != nil {
@@ -217,4 +291,3 @@ func (sm *SessionManager) ImportSession(sessionId string, data []byte) error {
 
 	return sm.SaveSession(sessionId, bundle.Exercises, bundle.Vault)
 }
-

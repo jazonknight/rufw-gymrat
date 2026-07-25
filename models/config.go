@@ -71,23 +71,9 @@ func GetMeAValidMaxValue(str string, isZeroAllowed bool, maxAllowed int) (int, e
 }
 
 func GetMaxPerUnit(unitStr UnitType) (int, error) {
-	//maxValue := 0
-
-	/*
-		switch str {
-		case "seconds":
-			maxValue = 360
-		case "count":
-			maxValue = 30
-		default:
-			return 0, errors.New("error: invalid unit provided")
-		}
-	*/
-
 	if maxValue, exists := MaxUnitValues[unitStr]; exists {
 		return maxValue, nil
 	}
 
 	return 0, errors.New("error: invalid unit provided")
-
 }

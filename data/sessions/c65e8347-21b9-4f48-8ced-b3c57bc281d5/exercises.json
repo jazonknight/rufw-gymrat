@@ -1,0 +1,34 @@
+{
+  "exercises": [
+    {
+      "id": "25d52899-01a9-4b8d-8b02-bc7bb48fae12",
+      "version": 1,
+      "name": "Bicel Curls",
+      "description": "Test",
+      "category": "Arms",
+      "isRemoved": false,
+      "createdAt": "2026-07-24T22:13:10.307899-05:00",
+      "updatedAt": "2026-07-24T22:13:10.307899-05:00"
+    },
+    {
+      "id": "c002d064-a730-4206-a5e6-1a4e6e2c9929",
+      "version": 1,
+      "name": "Lat pull down",
+      "description": "",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-07-24T22:14:20.007772-05:00",
+      "updatedAt": "2026-07-24T22:14:20.007772-05:00"
+    },
+    {
+      "id": "1f0c4a9a-2a2e-4c00-bf91-4077aacbeec0",
+      "version": 1,
+      "name": "Leg Curl",
+      "description": "",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-07-24T22:14:31.13228-05:00",
+      "updatedAt": "2026-07-24T22:14:31.13228-05:00"
+    }
+  ]
+}

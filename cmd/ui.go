@@ -47,17 +47,7 @@ func ClearScreen() {
 	cmd.Run()
 }
 
-// PrintMainMenu displays the primary choices for the gymrat application
-func PrintMainMenu() {
-	fmt.Print(Banner)
-	fmt.Println("=== MAIN MENU ===")
-	fmt.Println("1. Start a New Workout")
-	fmt.Println("2. View History")
-	fmt.Println("3. Check Progressive Overload Stats")
-	fmt.Println("4: Load a workout")
-	fmt.Println("5. Exit")
-	fmt.Print("\nChoose an option: ")
-}
+
 
 func ShowWorkoutPlansCLI(workoutPlans []models.Plan) {
 

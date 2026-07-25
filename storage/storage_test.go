@@ -17,7 +17,7 @@ func TestStorageAndSessionManager(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sm, err := storage.NewSessionManager(filepath.Join(tempDir, "sessions"))
+	sm, err := storage.NewSessionManager(filepath.Join(tempDir, "sessions"), "", "memory")
 	if err != nil {
 		t.Fatalf("Failed to create session manager: %v", err)
 	}
@@ -31,21 +31,28 @@ func TestStorageAndSessionManager(t *testing.T) {
 		t.Fatalf("Session %s should exist", sessionId)
 	}
 
-	// Prepare test catalog and vault
-	cat := models.ExerciseCatalogData{
-		Exercises: []models.Exercise{
-			{
-				Id:          "ex_bench",
-				Version:     1,
-				Name:        "Bench Press",
-				Description: "Flat barbell bench press",
-				Category:    "Chest",
-				IsRemoved:   false,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   time.Now(),
-			},
-		},
+	// Verify that new session is seeded with default exercises
+	cat, _, err := sm.LoadSession(sessionId)
+	if err != nil {
+		t.Fatalf("Failed to load initial session: %v", err)
 	}
+	if len(cat.Exercises) == 0 {
+		t.Errorf("Expected initial session to contain default seeded exercises, got 0")
+	}
+
+	initialSeedCount := len(cat.Exercises)
+
+	// Prepare updated catalog and vault
+	cat.Exercises = append(cat.Exercises, models.Exercise{
+		Id:          "ex_bench",
+		Version:     1,
+		Name:        "Bench Press",
+		Description: "Flat barbell bench press",
+		Category:    "Chest",
+		IsRemoved:   false,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
 
 	vault := models.GymRatVaultData{
 		WorkoutPlans: []models.Plan{
@@ -93,12 +100,17 @@ func TestStorageAndSessionManager(t *testing.T) {
 		t.Fatalf("Failed to load session: %v", err)
 	}
 
-	if len(loadedCat.Exercises) != 1 || loadedCat.Exercises[0].Name != "Bench Press" {
-		t.Errorf("Mismatch in loaded catalog exercises")
+	if len(loadedCat.Exercises) != initialSeedCount+1 {
+		t.Errorf("Expected %d exercises, got %d", initialSeedCount+1, len(loadedCat.Exercises))
 	}
 
 	if len(loadedVault.WorkoutPlans) != 1 || !loadedVault.WorkoutPlans[0].Workouts[0].IsExecuted {
 		t.Errorf("Mismatch in loaded vault plan execution status")
+	}
+
+	// Verify master DefaultCatalog is untouched (immutability)
+	if len(sm.DefaultCatalog.Exercises) != initialSeedCount {
+		t.Errorf("Master DefaultCatalog was modified! Expected %d, got %d", initialSeedCount, len(sm.DefaultCatalog.Exercises))
 	}
 
 	// Test Export & Import
@@ -121,7 +133,7 @@ func TestStorageAndSessionManager(t *testing.T) {
 		t.Fatalf("Failed to load imported session: %v", err)
 	}
 
-	if len(impCat.Exercises) != 1 || len(impVault.WorkoutPlans) != 1 {
+	if len(impCat.Exercises) != initialSeedCount+1 || len(impVault.WorkoutPlans) != 1 {
 		t.Errorf("Mismatch in imported data count")
 	}
 }
