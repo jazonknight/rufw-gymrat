@@ -855,6 +855,29 @@ function editRoutine(routineId) {
   document.getElementById('modal-routine').classList.add('active');
 }
 
+function removeExerciseStep(btnEl) {
+  const item = btnEl.closest('.routine-ex-builder-item');
+  if (item) item.remove();
+}
+
+function removeSetRow(btnEl) {
+  const row = btnEl.closest('.routine-set-row');
+  if (!row) return;
+  const container = row.parentElement;
+  row.remove();
+  if (container) reindexSetRows(container.id);
+}
+
+function reindexSetRows(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const rows = container.querySelectorAll('.routine-set-row');
+  rows.forEach((r, idx) => {
+    const label = r.querySelector('.set-label');
+    if (label) label.textContent = `Set ${idx + 1}`;
+  });
+}
+
 function addRoutineExerciseStep(existingWe = null) {
   const container = document.getElementById('routine-exercises-builder');
   const index = container.children.length + 1;
@@ -869,8 +892,11 @@ function addRoutineExerciseStep(existingWe = null) {
   div.className = 'routine-ex-builder-item';
   div.style.cssText = 'background: rgba(0,0,0,0.3); padding: 14px; margin-bottom: 14px; border-radius: 8px; border: 1px solid var(--border-color)';
   div.innerHTML = `
-    <div class="form-group">
-      <label>Select Exercise #${index} from Library</label>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <label style="font-size: 0.9rem; font-weight: 600;">Select Exercise from Library</label>
+      <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; color: var(--accent-rose);" onclick="removeExerciseStep(this)">🗑️ Remove Exercise</button>
+    </div>
+    <div class="form-group" style="margin-bottom: 10px;">
       <select class="r-ex-select">${optionsHtml || '<option value="">No Library Exercises Available</option>'}</select>
     </div>
     
@@ -878,16 +904,14 @@ function addRoutineExerciseStep(existingWe = null) {
       <!-- Set rows dynamically added -->
     </div>
 
-    <button type="button" class="btn btn-secondary btn-sm" onclick="addSetRowToRoutine('sets_container_${exIdIndex}')">+ Add Set</button>
+    <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="addSetRowToRoutine('sets_container_${exIdIndex}')">+ Add Set</button>
   `;
   container.appendChild(div);
 
   if (existingWe && existingWe.sets && existingWe.sets.length > 0) {
     existingWe.sets.forEach(s => addSetRowToRoutine(`sets_container_${exIdIndex}`, s));
   } else {
-    // Add 3 default set rows for convenient workout routine building
-    addSetRowToRoutine(`sets_container_${exIdIndex}`);
-    addSetRowToRoutine(`sets_container_${exIdIndex}`);
+    // Default to 1 initial set row for newly added exercise step
     addSetRowToRoutine(`sets_container_${exIdIndex}`);
   }
 }
@@ -905,7 +929,7 @@ function addSetRowToRoutine(containerId, setObj = null) {
   setRow.className = 'routine-set-row';
   setRow.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 8px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;';
   setRow.innerHTML = `
-    <span style="font-size: 0.85rem; font-weight: 600; width: 45px;">Set ${setIndex}</span>
+    <span class="set-label" style="font-size: 0.85rem; font-weight: 600; width: 45px;">Set ${setIndex}</span>
     <div style="flex: 1;">
       <select class="r-set-type" style="padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
         <option value="reps" ${setType === 'reps' ? 'selected' : ''}>Counting (Reps)</option>
@@ -918,8 +942,10 @@ function addSetRowToRoutine(containerId, setObj = null) {
     <div style="flex: 1;">
       <input type="number" class="r-weight" value="${weight}" placeholder="Weight (lbs)" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
     </div>
+    <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; color: var(--accent-rose);" onclick="removeSetRow(this)" title="Remove Set">🗑️</button>
   `;
   container.appendChild(setRow);
+  reindexSetRows(containerId);
 }
 
 function addPlanScheduleStep() {
