@@ -169,6 +169,55 @@
           ]
         }
       }
+    },
+    {
+      "id": "tmpl_weekend_arms",
+      "name": "Weekend Arm & Shoulder Hypertrophy",
+      "description": "Rear delt flyes, lateral raises, bicep curls, and skullcrushers isolation routine",
+      "datePlanned": "2026-01-01T00:00:00Z",
+      "isExecuted": false,
+      "exercises": {
+        "ex_sitting_rear_delt_flies": {
+          "exerciseId": "ex_sitting_rear_delt_flies",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Sitting Rear Delt Flyes",
+          "sets": [
+            { "id": "wa_rdf1", "setType": "reps", "repCount": 16, "weight": 20, "perceivedEffort": 9 },
+            { "id": "wa_rdf2", "setType": "reps", "repCount": 13, "weight": 20, "perceivedEffort": 9 },
+            { "id": "wa_rdf3", "setType": "reps", "repCount": 8, "weight": 20, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_standing_lateral_raises": {
+          "exerciseId": "ex_standing_lateral_raises",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Standing Lateral Raises",
+          "sets": [
+            { "id": "wa_slr1", "setType": "reps", "repCount": 11, "weight": 12, "perceivedEffort": 9 },
+            { "id": "wa_slr2", "setType": "reps", "repCount": 10, "weight": 12, "perceivedEffort": 9 },
+            { "id": "wa_slr3", "setType": "reps", "repCount": 8, "weight": 12, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_curl_default": {
+          "exerciseId": "ex_curl_default",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Dumbbell Bicep Curl",
+          "sets": [
+            { "id": "wa_dbc1", "setType": "reps", "repCount": 15, "weight": 20, "perceivedEffort": 9 },
+            { "id": "wa_dbc2", "setType": "reps", "repCount": 12, "weight": 20, "perceivedEffort": 9 },
+            { "id": "wa_dbc3", "setType": "reps", "repCount": 10, "weight": 20, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_db_skullcrushers": {
+          "exerciseId": "ex_db_skullcrushers",
+          "exerciseVersion": 1,
+          "nameSnapshot": "DB Skullcrushers",
+          "sets": [
+            { "id": "wa_sk1", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 9 },
+            { "id": "wa_sk2", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 9 },
+            { "id": "wa_sk3", "setType": "reps", "repCount": 12, "weight": 25, "perceivedEffort": 9 }
+          ]
+        }
+      }
     }
   ]
 }

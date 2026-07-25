@@ -148,10 +148,12 @@ All REST endpoints accept an optional header `X-Session-ID` (or query param `ses
 | `DELETE` | `/api/exercises?id=<ID>` | Soft-delete or restore an exercise by toggling `IsRemoved`. |
 | `GET` | `/api/workouts` | List all standalone Workout Routine templates in the active session. |
 | `POST` | `/api/workouts` | Create a new standalone Workout Routine template. |
+| `POST` | `/api/workouts/copy` | Duplicates an existing Workout Routine template with a fresh UUID. |
 | `PUT` | `/api/workouts` | Update an existing Workout Routine template. |
 | `DELETE` | `/api/workouts?id=<ID>` | Delete a Workout Routine template by ID. |
 | `GET` | `/api/plans` | List all Training Plans in the active session. |
 | `POST` | `/api/plans` | Create a new Training Plan with scheduled workout instances (`datePlanned`). |
+| `POST` | `/api/plans/copy` | Duplicates an existing Training Plan with fresh UUIDs for all workout instances. |
 | `PUT` | `/api/plans` | Update plan details or toggle a scheduled workout's `isExecuted` state. |
 | `GET` | `/api/history` | List all completed workout history logs chronologically. |
 | `POST` | `/api/history` | Record a completed live workout session log (duration, actual reps/weights, total volume). |

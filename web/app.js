@@ -217,11 +217,54 @@ function renderRoutines() {
       <p class="ex-desc">${escapeHtml(routine.description || 'Workout Routine Template')}</p>
       ${exSummary}
       <div class="card-actions">
+        <button class="btn btn-primary btn-sm" onclick="copyWorkoutTemplate('${routine.id}')">📋 Duplicate Routine</button>
         <button class="btn btn-secondary btn-sm" onclick="deleteRoutine('${routine.id}')">Delete Routine</button>
       </div>
     `;
     grid.appendChild(card);
   });
+}
+
+/**
+ * Triggers server-side duplication of a Workout Routine template by ID.
+ * Generates a fresh UUID on the server and re-renders the dashboard.
+ */
+async function copyWorkoutTemplate(workoutId) {
+  try {
+    const res = await fetch(`${API_BASE}/workouts/copy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-ID': activeSessionId
+      },
+      body: JSON.stringify({ workoutId })
+    });
+    if (!res.ok) throw new Error('Failed to copy workout template');
+    await loadDashboardData();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/**
+ * Triggers server-side duplication of a Training Plan by ID.
+ * Generates fresh UUIDs for the plan and all internal scheduled workouts, resetting execution status.
+ */
+async function copyPlan(planId) {
+  try {
+    const res = await fetch(`${API_BASE}/plans/copy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-ID': activeSessionId
+      },
+      body: JSON.stringify({ planId })
+    });
+    if (!res.ok) throw new Error('Failed to copy training plan');
+    await loadDashboardData();
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 // TIER 3: Render Training Plans with Live Logger Trigger
@@ -285,7 +328,10 @@ function renderPlans() {
           <h3>${escapeHtml(plan.name)}</h3>
           <p class="subtitle">${escapeHtml(plan.description || '')} • ${plan.workouts ? plan.workouts.length : 0} Scheduled Sessions</p>
         </div>
-        <span class="badge">${plan.status || 'Active'}</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-secondary btn-sm" onclick="copyPlan('${plan.id}')">📋 Duplicate Plan</button>
+          <span class="badge">${plan.status || 'Active'}</span>
+        </div>
       </div>
       <div class="workouts-subgrid">
         ${workoutsHtml || '<p class="subtitle">No workout instances scheduled in this plan.</p>'}

@@ -1,66 +1,57 @@
 {
   "workoutPlans": [
     {
-      "id": "plan_default_ppl",
-      "name": "PPL Hypertrophy 4-Week Block",
-      "description": "Classic Push/Pull/Legs 3-day split designed for strength & progressive overload.",
+      "id": "plan_weekend_arm_specialization",
+      "name": "Weekend Arm & Shoulder Specialization Program",
+      "description": "4-week hypertrophy block featuring dedicated weekend arm & shoulder isolation routines.",
       "status": "active",
-      "datePlanned": "2026-01-01T00:00:00Z",
+      "datePlanned": "2026-08-01T00:00:00Z",
       "workouts": [
         {
-          "id": "w_scheduled_push_1",
-          "name": "Upper Body Push Heavy",
-          "description": "Bench press & overhead press focus",
-          "datePlanned": "2026-08-03T00:00:00Z",
+          "id": "w_weekend_arms_instance_1",
+          "name": "Weekend Arm & Shoulder Hypertrophy",
+          "description": "Rear delt flyes, lateral raises, bicep curls, and skullcrushers isolation routine",
+          "datePlanned": "2026-08-08T00:00:00Z",
           "isExecuted": false,
           "exercises": {
-            "ex_bench_default": {
-              "exerciseId": "ex_bench_default",
+            "ex_sitting_rear_delt_flies": {
+              "exerciseId": "ex_sitting_rear_delt_flies",
               "exerciseVersion": 1,
-              "nameSnapshot": "Barbell Bench Press",
+              "nameSnapshot": "Sitting Rear Delt Flyes",
               "sets": [
-                {
-                  "id": "s1_bench",
-                  "setType": "reps",
-                  "repCount": 10,
-                  "weight": 185,
-                  "perceivedEffort": 8
-                },
-                {
-                  "id": "s2_bench",
-                  "setType": "reps",
-                  "repCount": 8,
-                  "weight": 205,
-                  "perceivedEffort": 8
-                },
-                {
-                  "id": "s3_bench",
-                  "setType": "reps",
-                  "repCount": 6,
-                  "weight": 225,
-                  "perceivedEffort": 9
-                }
+                { "id": "wa_rdf1", "setType": "reps", "repCount": 16, "weight": 20, "perceivedEffort": 9 },
+                { "id": "wa_rdf2", "setType": "reps", "repCount": 13, "weight": 20, "perceivedEffort": 9 },
+                { "id": "wa_rdf3", "setType": "reps", "repCount": 8, "weight": 20, "perceivedEffort": 9 }
               ]
             },
-            "ex_ohp_default": {
-              "exerciseId": "ex_ohp_default",
+            "ex_standing_lateral_raises": {
+              "exerciseId": "ex_standing_lateral_raises",
               "exerciseVersion": 1,
-              "nameSnapshot": "Overhead Barbell Press",
+              "nameSnapshot": "Standing Lateral Raises",
               "sets": [
-                {
-                  "id": "s1_ohp",
-                  "setType": "reps",
-                  "repCount": 10,
-                  "weight": 115,
-                  "perceivedEffort": 8
-                },
-                {
-                  "id": "s2_ohp",
-                  "setType": "reps",
-                  "repCount": 8,
-                  "weight": 135,
-                  "perceivedEffort": 8
-                }
+                { "id": "wa_slr1", "setType": "reps", "repCount": 11, "weight": 12, "perceivedEffort": 9 },
+                { "id": "wa_slr2", "setType": "reps", "repCount": 10, "weight": 12, "perceivedEffort": 9 },
+                { "id": "wa_slr3", "setType": "reps", "repCount": 8, "weight": 12, "perceivedEffort": 9 }
+              ]
+            },
+            "ex_curl_default": {
+              "exerciseId": "ex_curl_default",
+              "exerciseVersion": 1,
+              "nameSnapshot": "Dumbbell Bicep Curl",
+              "sets": [
+                { "id": "wa_dbc1", "setType": "reps", "repCount": 15, "weight": 20, "perceivedEffort": 9 },
+                { "id": "wa_dbc2", "setType": "reps", "repCount": 12, "weight": 20, "perceivedEffort": 9 },
+                { "id": "wa_dbc3", "setType": "reps", "repCount": 10, "weight": 20, "perceivedEffort": 9 }
+              ]
+            },
+            "ex_db_skullcrushers": {
+              "exerciseId": "ex_db_skullcrushers",
+              "exerciseVersion": 1,
+              "nameSnapshot": "DB Skullcrushers",
+              "sets": [
+                { "id": "wa_sk1", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 9 },
+                { "id": "wa_sk2", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 9 },
+                { "id": "wa_sk3", "setType": "reps", "repCount": 12, "weight": 25, "perceivedEffort": 9 }
               ]
             }
           }
