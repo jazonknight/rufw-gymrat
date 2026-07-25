@@ -163,4 +163,4 @@ All REST endpoints accept an optional header `X-Session-ID` (or query param `ses
 
 ## 📜 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the GNU Affero General Public License v3.0 (AGPL-3.0). See `LICENSE` for more information.
