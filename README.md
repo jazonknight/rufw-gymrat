@@ -21,8 +21,7 @@
   * Search bar and dynamic muscle group dropdown filter (*Legs, Chest, Back, Shoulders, Core*) in the Exercise Library.
 * **⚡ Stateless In-Memory REST Engine (`STORAGE_MODE=memory`)**:
   * Operates statelessly in server RAM with **0 server disk writes** by default. Users own their JSON data locally and sync/export via the Web UI.
-* **🛡 Security & Cloudflare Tunnel Ready**:
-  * Pre-configured for **Cloudflare Tunnel** (`cloudflared`) deployment at `gymrat.rufw.io` with zero open router ports and automated HTTPS TLS encryption.
+* **🛡 Security **:
   * Configurable upload body size limit (`MAX_PAYLOAD_MB`) to prevent RAM exhaustion.
 
 ---
