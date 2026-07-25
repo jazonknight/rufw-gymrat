@@ -1,0 +1,174 @@
+{
+  "workoutPlans": [],
+  "workoutTemplates": [
+    {
+      "id": "tmpl_total_body_a",
+      "name": "Total Body Workout A (Push & Chest Focus)",
+      "description": "Upper body press hypertrophy and core activation program",
+      "datePlanned": "2026-01-01T00:00:00Z",
+      "isExecuted": false,
+      "exercises": {
+        "ex_machine_chest_press": {
+          "exerciseId": "ex_machine_chest_press",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Machine Chest Press",
+          "sets": [
+            { "id": "tba_mcp1", "setType": "reps", "repCount": 13, "weight": 70, "perceivedEffort": 7 },
+            { "id": "tba_mcp2", "setType": "reps", "repCount": 14, "weight": 60, "perceivedEffort": 8 },
+            { "id": "tba_mcp3", "setType": "reps", "repCount": 9, "weight": 60, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_db_shoulder_press": {
+          "exerciseId": "ex_db_shoulder_press",
+          "exerciseVersion": 1,
+          "nameSnapshot": "DB Shoulder Press",
+          "sets": [
+            { "id": "tba_dsp1", "setType": "reps", "repCount": 8, "weight": 25, "perceivedEffort": 8 },
+            { "id": "tba_dsp2", "setType": "reps", "repCount": 13, "weight": 20, "perceivedEffort": 8 },
+            { "id": "tba_dsp3", "setType": "reps", "repCount": 11, "weight": 20, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_standing_lateral_raises": {
+          "exerciseId": "ex_standing_lateral_raises",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Standing Lateral Raises",
+          "sets": [
+            { "id": "tba_slr1", "setType": "reps", "repCount": 11, "weight": 12, "perceivedEffort": 8 },
+            { "id": "tba_slr2", "setType": "reps", "repCount": 10, "weight": 12, "perceivedEffort": 8 },
+            { "id": "tba_slr3", "setType": "reps", "repCount": 8, "weight": 12, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_db_skullcrushers": {
+          "exerciseId": "ex_db_skullcrushers",
+          "exerciseVersion": 1,
+          "nameSnapshot": "DB Skullcrushers",
+          "sets": [
+            { "id": "tba_sk1", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 7 },
+            { "id": "tba_sk2", "setType": "reps", "repCount": 15, "weight": 25, "perceivedEffort": 8 },
+            { "id": "tba_sk3", "setType": "reps", "repCount": 12, "weight": 25, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_weighted_dead_bugs": {
+          "exerciseId": "ex_weighted_dead_bugs",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Weighted Ball Dead Bugs",
+          "sets": [
+            { "id": "tba_wdb1", "setType": "reps", "repCount": 10, "weight": 10, "perceivedEffort": 7 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tmpl_total_body_b",
+      "name": "Total Body Workout B (Pull & Row Focus)",
+      "description": "Lat pulldowns, tripod rows, and posterior chain hinging",
+      "datePlanned": "2026-01-01T00:00:00Z",
+      "isExecuted": false,
+      "exercises": {
+        "ex_lat_pulldowns": {
+          "exerciseId": "ex_lat_pulldowns",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Lat Pulldowns",
+          "sets": [
+            { "id": "tbb_lp1", "setType": "reps", "repCount": 10, "weight": 110, "perceivedEffort": 8 },
+            { "id": "tbb_lp2", "setType": "reps", "repCount": 15, "weight": 105, "perceivedEffort": 8 },
+            { "id": "tbb_lp3", "setType": "reps", "repCount": 11, "weight": 105, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_db_tripod_row": {
+          "exerciseId": "ex_db_tripod_row",
+          "exerciseVersion": 1,
+          "nameSnapshot": "DB Tripod Row",
+          "sets": [
+            { "id": "tbb_tr1", "setType": "reps", "repCount": 13, "weight": 50, "perceivedEffort": 8 },
+            { "id": "tbb_tr2", "setType": "reps", "repCount": 11, "weight": 50, "perceivedEffort": 8 },
+            { "id": "tbb_tr3", "setType": "reps", "repCount": 9, "weight": 50, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_db_pullovers": {
+          "exerciseId": "ex_db_pullovers",
+          "exerciseVersion": 1,
+          "nameSnapshot": "DB Pullovers",
+          "sets": [
+            { "id": "tbb_po1", "setType": "reps", "repCount": 14, "weight": 50, "perceivedEffort": 8 },
+            { "id": "tbb_po2", "setType": "reps", "repCount": 12, "weight": 50, "perceivedEffort": 8 },
+            { "id": "tbb_po3", "setType": "reps", "repCount": 8, "weight": 50, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_cable_face_pulls": {
+          "exerciseId": "ex_cable_face_pulls",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Rope Cable Face Pulls",
+          "sets": [
+            { "id": "tbb_fp1", "setType": "reps", "repCount": 16, "weight": 80, "perceivedEffort": 8 },
+            { "id": "tbb_fp2", "setType": "reps", "repCount": 14, "weight": 80, "perceivedEffort": 8 }
+          ]
+        },
+        "ex_curl_default": {
+          "exerciseId": "ex_curl_default",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Dumbbell Bicep Curl",
+          "sets": [
+            { "id": "tbb_bc1", "setType": "reps", "repCount": 15, "weight": 20, "perceivedEffort": 8 },
+            { "id": "tbb_bc2", "setType": "reps", "repCount": 12, "weight": 20, "perceivedEffort": 8 },
+            { "id": "tbb_bc3", "setType": "reps", "repCount": 10, "weight": 20, "perceivedEffort": 9 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tmpl_total_body_c",
+      "name": "Total Body Workout C (Legs & Unilateral Focus)",
+      "description": "Reverse lunges, trap bar lifts, leg press, and calf hypertrophy",
+      "datePlanned": "2026-01-01T00:00:00Z",
+      "isExecuted": false,
+      "exercises": {
+        "ex_front_foot_elevated_reverse_lunge": {
+          "exerciseId": "ex_front_foot_elevated_reverse_lunge",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Front Foot Elevated Reverse Lunge",
+          "sets": [
+            { "id": "tbc_rl1", "setType": "reps", "repCount": 8, "weight": 65, "perceivedEffort": 8 },
+            { "id": "tbc_rl2", "setType": "reps", "repCount": 8, "weight": 65, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_trap_bar_deadlift": {
+          "exerciseId": "ex_trap_bar_deadlift",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Trap Bar Deadlift",
+          "sets": [
+            { "id": "tbc_tb1", "setType": "reps", "repCount": 6, "weight": 105, "perceivedEffort": 8 },
+            { "id": "tbc_tb2", "setType": "reps", "repCount": 4, "weight": 105, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_leg_press": {
+          "exerciseId": "ex_leg_press",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Leg Press",
+          "sets": [
+            { "id": "tbc_lp1", "setType": "reps", "repCount": 9, "weight": 180, "perceivedEffort": 8 },
+            { "id": "tbc_lp2", "setType": "reps", "repCount": 6, "weight": 180, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_leg_curls": {
+          "exerciseId": "ex_leg_curls",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Seated Leg Curls",
+          "sets": [
+            { "id": "tbc_lc1", "setType": "reps", "repCount": 13, "weight": 130, "perceivedEffort": 8 },
+            { "id": "tbc_lc2", "setType": "reps", "repCount": 10, "weight": 130, "perceivedEffort": 9 }
+          ]
+        },
+        "ex_smith_calf_raises": {
+          "exerciseId": "ex_smith_calf_raises",
+          "exerciseVersion": 1,
+          "nameSnapshot": "Elevated Smith Machine Calf Raises",
+          "sets": [
+            { "id": "tbc_cr1", "setType": "reps", "repCount": 17, "weight": 25, "perceivedEffort": 8 },
+            { "id": "tbc_cr2", "setType": "reps", "repCount": 10, "weight": 25, "perceivedEffort": 9 }
+          ]
+        }
+      }
+    }
+  ]
+}

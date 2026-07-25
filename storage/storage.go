@@ -27,6 +27,12 @@ const (
 //go:embed default_exercises.json
 var embeddedDefaultExercises []byte
 
+//go:embed default_workouts.json
+var embeddedDefaultWorkouts []byte
+
+//go:embed default_plans.json
+var embeddedDefaultPlans []byte
+
 // LoadDefaultSeedCatalog loads the default exercise catalog from a specified JSON file path
 // or falls back to the embedded default_exercises.json file.
 func LoadDefaultSeedCatalog(seedFilePath string) models.ExerciseCatalogData {
@@ -44,6 +50,19 @@ func LoadDefaultSeedCatalog(seedFilePath string) models.ExerciseCatalogData {
 	// Load from embedded standalone default_exercises.json file
 	_ = json.Unmarshal(embeddedDefaultExercises, &catalog)
 	return catalog
+}
+
+// LoadDefaultSeedVault loads starter workout routines and training plans from default_workouts.json and default_plans.json.
+func LoadDefaultSeedVault() models.GymRatVaultData {
+	var vault models.GymRatVaultData
+	_ = json.Unmarshal(embeddedDefaultWorkouts, &vault)
+
+	var plansVault models.GymRatVaultData
+	if err := json.Unmarshal(embeddedDefaultPlans, &plansVault); err == nil && len(plansVault.WorkoutPlans) > 0 {
+		vault.WorkoutPlans = plansVault.WorkoutPlans
+	}
+
+	return vault
 }
 
 // SaveExercises serializes and writes the exercise catalog to exercises.json in the specified directory.
@@ -129,6 +148,7 @@ type CombinedSessionBundle struct {
 type SessionManager struct {
 	BaseDir        string
 	DefaultCatalog models.ExerciseCatalogData
+	DefaultVault   models.GymRatVaultData
 	StorageMode    string // "memory" (default, 0 disk writes) or "disk"
 	sessions       map[string]*CombinedSessionBundle
 	mu             sync.RWMutex
@@ -147,16 +167,25 @@ func NewSessionManager(baseDir string, seedFilePath string, storageMode string) 
 	}
 
 	seedCatalog := LoadDefaultSeedCatalog(seedFilePath)
+	seedVault := LoadDefaultSeedVault()
 
 	return &SessionManager{
 		BaseDir:        baseDir,
 		DefaultCatalog: seedCatalog,
+		DefaultVault:   seedVault,
 		StorageMode:    storageMode,
 		sessions:       make(map[string]*CombinedSessionBundle),
 	}, nil
 }
 
-// CreateSession generates a unique Session ID and seeds a copy of the default exercise catalog into RAM.
+func cloneVault(v models.GymRatVaultData) models.GymRatVaultData {
+	bytes, _ := json.Marshal(v)
+	var clone models.GymRatVaultData
+	_ = json.Unmarshal(bytes, &clone)
+	return clone
+}
+
+// CreateSession generates a unique Session ID and seeds a copy of the default exercise catalog and starter routines into RAM.
 func (sm *SessionManager) CreateSession() (string, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -170,7 +199,7 @@ func (sm *SessionManager) CreateSession() (string, error) {
 	bundle := &CombinedSessionBundle{
 		SessionId: sessionId,
 		Exercises: models.ExerciseCatalogData{Exercises: seedExercisesCopy},
-		Vault:     models.GymRatVaultData{WorkoutPlans: []models.Plan{}},
+		Vault:     cloneVault(sm.DefaultVault),
 	}
 
 	sm.sessions[sessionId] = bundle
@@ -216,7 +245,7 @@ func (sm *SessionManager) SessionExists(sessionId string) bool {
 }
 
 // LoadSession reads and returns the exercise catalog and plans vault for the specified session ID from RAM.
-// If the session does not exist in memory, it auto-initializes it seeded with the default exercise catalog.
+// If the session does not exist in memory, it auto-initializes it seeded with the default exercise catalog and starter routines.
 func (sm *SessionManager) LoadSession(sessionId string) (models.ExerciseCatalogData, models.GymRatVaultData, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -234,14 +263,14 @@ func (sm *SessionManager) LoadSession(sessionId string) (models.ExerciseCatalogD
 			}
 		}
 
-		// Auto-initialize session in memory seeded with default starter exercises
+		// Auto-initialize session in memory seeded with default starter exercises and routines
 		seedExercisesCopy := make([]models.Exercise, len(sm.DefaultCatalog.Exercises))
 		copy(seedExercisesCopy, sm.DefaultCatalog.Exercises)
 
 		bundle = &CombinedSessionBundle{
 			SessionId: sessionId,
 			Exercises: models.ExerciseCatalogData{Exercises: seedExercisesCopy},
-			Vault:     models.GymRatVaultData{WorkoutPlans: []models.Plan{}},
+			Vault:     cloneVault(sm.DefaultVault),
 		}
 		sm.sessions[sessionId] = bundle
 	}

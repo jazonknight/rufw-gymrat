@@ -1,0 +1,71 @@
+{
+  "workoutPlans": [
+    {
+      "id": "plan_default_ppl",
+      "name": "PPL Hypertrophy 4-Week Block",
+      "description": "Classic Push/Pull/Legs 3-day split designed for strength & progressive overload.",
+      "status": "active",
+      "datePlanned": "2026-01-01T00:00:00Z",
+      "workouts": [
+        {
+          "id": "w_scheduled_push_1",
+          "name": "Upper Body Push Heavy",
+          "description": "Bench press & overhead press focus",
+          "datePlanned": "2026-08-03T00:00:00Z",
+          "isExecuted": false,
+          "exercises": {
+            "ex_bench_default": {
+              "exerciseId": "ex_bench_default",
+              "exerciseVersion": 1,
+              "nameSnapshot": "Barbell Bench Press",
+              "sets": [
+                {
+                  "id": "s1_bench",
+                  "setType": "reps",
+                  "repCount": 10,
+                  "weight": 185,
+                  "perceivedEffort": 8
+                },
+                {
+                  "id": "s2_bench",
+                  "setType": "reps",
+                  "repCount": 8,
+                  "weight": 205,
+                  "perceivedEffort": 8
+                },
+                {
+                  "id": "s3_bench",
+                  "setType": "reps",
+                  "repCount": 6,
+                  "weight": 225,
+                  "perceivedEffort": 9
+                }
+              ]
+            },
+            "ex_ohp_default": {
+              "exerciseId": "ex_ohp_default",
+              "exerciseVersion": 1,
+              "nameSnapshot": "Overhead Barbell Press",
+              "sets": [
+                {
+                  "id": "s1_ohp",
+                  "setType": "reps",
+                  "repCount": 10,
+                  "weight": 115,
+                  "perceivedEffort": 8
+                },
+                {
+                  "id": "s2_ohp",
+                  "setType": "reps",
+                  "repCount": 8,
+                  "weight": 135,
+                  "perceivedEffort": 8
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

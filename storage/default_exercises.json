@@ -5,7 +5,7 @@
       "version": 1,
       "name": "Barbell Back Squat",
       "description": "Barbell placed across upper back, squat down keeping knees aligned over toes.",
-      "category": "Legs / Quadriceps",
+      "category": "Legs",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -15,7 +15,27 @@
       "version": 1,
       "name": "Barbell Bench Press",
       "description": "Flat bench press focusing on chest, anterior deltoids, and triceps.",
-      "category": "Chest / Push",
+      "category": "Chest",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_chest_press",
+      "version": 1,
+      "name": "DB Chest Press",
+      "description": "Dumbbell flat or incline chest press.",
+      "category": "Chest",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_machine_chest_press",
+      "version": 1,
+      "name": "Machine Chest Press",
+      "description": "Seated machine press for chest hypertrophy.",
+      "category": "Chest",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -25,7 +45,37 @@
       "version": 1,
       "name": "Conventional Deadlift",
       "description": "Hinge at hips to lift barbell from floor, maintaining neutral spine.",
-      "category": "Back / Posterior Chain",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_trap_bar_deadlift",
+      "version": 1,
+      "name": "Trap Bar Deadlift",
+      "description": "Neutral grip deadlift using hex/trap bar.",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_rdl",
+      "version": 1,
+      "name": "Dumbbell RDL",
+      "description": "Hinged stance with dumbbells targeting glutes and hamstrings.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_kb_sl_rdl",
+      "version": 1,
+      "name": "Single-Leg Kettlebell RDL",
+      "description": "Unilateral hinge targeting hamstrings and hip stability.",
+      "category": "Legs",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -35,7 +85,37 @@
       "version": 1,
       "name": "Overhead Barbell Press",
       "description": "Standing shoulder press driving barbell vertically above head.",
-      "category": "Shoulders / Push",
+      "category": "Shoulders",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_shoulder_press",
+      "version": 1,
+      "name": "DB Shoulder Press",
+      "description": "Seated or standing dumbbell overhead shoulder press.",
+      "category": "Shoulders",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_standing_lateral_raises",
+      "version": 1,
+      "name": "Standing Lateral Raises",
+      "description": "Dumbbell lateral raises targeting side deltoids.",
+      "category": "Shoulders",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_sitting_rear_delt_flies",
+      "version": 1,
+      "name": "Sitting Rear Delt Flyes",
+      "description": "Seated bent-over dumbbell flyes for posterior delts.",
+      "category": "Shoulders",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -45,27 +125,127 @@
       "version": 1,
       "name": "Bodyweight Pull-Up",
       "description": "Overhand grip pull-up focusing on latissimus dorsi and upper back.",
-      "category": "Back / Pull",
+      "category": "Back",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
     },
     {
-      "id": "ex_row_default",
+      "id": "ex_assisted_pullup",
       "version": 1,
-      "name": "Bent-Over Barbell Row",
-      "description": "Hinged stance pulling barbell to lower chest.",
-      "category": "Back / Pull",
+      "name": "Assisted Pull-Up Machine",
+      "description": "Machine-assisted pull-ups for lats and upper back.",
+      "category": "Back",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
     },
     {
-      "id": "ex_plank_default",
+      "id": "ex_lat_pulldowns",
       "version": 1,
-      "name": "Forearm Plank Hold",
-      "description": "Isometric core hold keeping body straight from head to heels.",
-      "category": "Core / Timed",
+      "name": "Lat Pulldowns",
+      "description": "Cable machine pulldowns for latissimus dorsi width.",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_tripod_row",
+      "version": 1,
+      "name": "DB Tripod Row",
+      "description": "Single-arm dumbbell row supported in a tripod stance.",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_pullovers",
+      "version": 1,
+      "name": "DB Pullovers",
+      "description": "Dumbbell lat pullover across bench.",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_cable_face_pulls",
+      "version": 1,
+      "name": "Rope Cable Face Pulls",
+      "description": "High cable face pulls for rear delts and upper back posture.",
+      "category": "Back",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_side_lunges",
+      "version": 1,
+      "name": "DB Side Lunges",
+      "description": "Lateral lunges with dumbbell targeting adductors and quads.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_reverse_lunges",
+      "version": 1,
+      "name": "DB Reverse Lunges",
+      "description": "Stepping backward into lunge with dumbbells.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_front_foot_elevated_reverse_lunge",
+      "version": 1,
+      "name": "Front Foot Elevated Reverse Lunge",
+      "description": "Increased range of motion reverse lunge on step box.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_leg_press",
+      "version": 1,
+      "name": "Leg Press",
+      "description": "45-degree leg press for quad hypertrophy.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_leg_curls",
+      "version": 1,
+      "name": "Seated Leg Curls",
+      "description": "Seated hamstring curl machine.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_smith_calf_raises",
+      "version": 1,
+      "name": "Elevated Smith Machine Calf Raises",
+      "description": "Standing calf raises on step using Smith machine.",
+      "category": "Legs",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_soleus_calf_raises",
+      "version": 1,
+      "name": "Soleus Calf Machine Raises",
+      "description": "Seated calf machine raises targeting soleus muscle.",
+      "category": "Legs",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -75,7 +255,57 @@
       "version": 1,
       "name": "Dumbbell Bicep Curl",
       "description": "Standing alternate dumbbell curls focusing on bicep peak.",
-      "category": "Arms / Biceps",
+      "category": "Arms",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_db_skullcrushers",
+      "version": 1,
+      "name": "DB Skullcrushers",
+      "description": "Lying dumbbell tricep extension.",
+      "category": "Arms",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_bicycle_kicks",
+      "version": 1,
+      "name": "Bicycle Kicks",
+      "description": "Timed core exercise for rectus abdominis and obliques.",
+      "category": "Core",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_weighted_dead_bugs",
+      "version": 1,
+      "name": "Weighted Ball Dead Bugs",
+      "description": "Core stability dead bugs holding weighted medicine ball.",
+      "category": "Core",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_rainbow_slamballs",
+      "version": 1,
+      "name": "Standing Weighted Rainbow Slamballs",
+      "description": "Full body rotational core slam ball movement.",
+      "category": "Core",
+      "isRemoved": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "ex_copenhagen_plank",
+      "version": 1,
+      "name": "Copenhagen Side Plank",
+      "description": "Adductor and lateral core isometric hold.",
+      "category": "Core",
       "isRemoved": false,
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"

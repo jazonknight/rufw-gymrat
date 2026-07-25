@@ -27,7 +27,7 @@ func main() {
 	defaultSessionDir := getEnv("SESSIONS_DIR", filepath.Join(".", "data", "sessions"))
 	defaultWebDir := getEnv("WEB_DIR", filepath.Join(".", "web"))
 	defaultStorageMode := getEnv("STORAGE_MODE", "memory")
-	defaultSeedFile := getEnv("SEED_FILE", storage.DefaultSeedFilename)
+	defaultSeedFile := getEnv("SEED_FILE", filepath.Join("storage", storage.DefaultSeedFilename))
 	defaultMaxPayloadMB := 5
 	if val := os.Getenv("MAX_PAYLOAD_MB"); val != "" {
 		if parsed, err := strconv.Atoi(val); err == nil && parsed > 0 {
