@@ -32,8 +32,9 @@
 
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs">
-      <button class="tab-btn active" data-tab="catalog">📦 Exercise Catalog</button>
-      <button class="tab-btn" data-tab="plans">📋 Workout Plans</button>
+      <button class="tab-btn active" data-tab="catalog">📦 Exercise Library</button>
+      <button class="tab-btn" data-tab="routines">🏋️‍♂️ Workout Routines</button>
+      <button class="tab-btn" data-tab="plans">📋 Training Plans</button>
       <button class="tab-btn" data-tab="upload">📤 Import / Export Vault</button>
     </nav>
 
@@ -44,7 +45,7 @@
       <section id="tab-catalog" class="tab-content active">
         <div class="section-header">
           <div>
-            <h2>Exercise Catalog</h2>
+            <h2>Exercise Library</h2>
             <p>Independent exercise definitions with version history & soft deletion.</p>
           </div>
           <div class="actions-row">
@@ -61,14 +62,29 @@
         </div>
       </section>
 
-      <!-- TAB 2: WORKOUT PLANS -->
+      <!-- TAB 2: WORKOUT ROUTINES -->
+      <section id="tab-routines" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2>Workout Routines</h2>
+            <p>Standalone workout templates built from exercises in your library.</p>
+          </div>
+          <button id="btn-add-routine" class="btn btn-accent">+ Create Workout Routine</button>
+        </div>
+
+        <div id="routines-grid" class="cards-grid">
+          <!-- Workout Routine cards injected by app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 3: TRAINING PLANS -->
       <section id="tab-plans" class="tab-content">
         <div class="section-header">
           <div>
-            <h2>Workout Plans & Workouts</h2>
-            <p>Plans containing scheduled workouts, date tracking, and execution status.</p>
+            <h2>Training Plans & Programs</h2>
+            <p>High-level training programs containing a schedule of pre-created Workout Routines.</p>
           </div>
-          <button id="btn-add-plan" class="btn btn-accent">+ Create Plan</button>
+          <button id="btn-add-plan" class="btn btn-accent">+ Create Training Plan</button>
         </div>
 
         <div id="plans-container" class="plans-list">
@@ -129,34 +145,69 @@
     </div>
   </div>
 
-  <!-- MODAL: CREATE PLAN -->
+  <!-- MODAL: CREATE / EDIT WORKOUT ROUTINE -->
+  <div id="modal-routine" class="modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-routine-title">Create Workout Routine</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-routine">
+        <input type="hidden" id="routine-id">
+        <div class="form-group">
+          <label>Routine Name</label>
+          <input type="text" id="routine-name" required placeholder="e.g. Push Day A or Lower Body Heavy">
+        </div>
+        <div class="form-group">
+          <label>Description / Target Focus</label>
+          <input type="text" id="routine-desc" placeholder="e.g. Chest emphasis, 60s rest intervals">
+        </div>
+
+        <hr class="divider">
+        <h4>Exercises in this Routine</h4>
+        <div id="routine-exercises-builder">
+          <!-- Exercise blocks added dynamically -->
+        </div>
+
+        <button type="button" id="btn-add-routine-ex-step" class="btn btn-secondary btn-sm">+ Add Exercise to Routine</button>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Routine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE TRAINING PLAN -->
   <div id="modal-plan" class="modal">
     <div class="modal-content modal-lg">
       <div class="modal-header">
-        <h3>Create Workout Plan</h3>
+        <h3>Create Training Plan</h3>
         <button class="modal-close">&times;</button>
       </div>
       <form id="form-plan">
         <div class="form-group">
           <label>Plan Name</label>
-          <input type="text" id="plan-name" required placeholder="e.g. 12-Week Hypertrophy Phase 1">
+          <input type="text" id="plan-name" required placeholder="e.g. 12-Week Hypertrophy Program">
         </div>
         <div class="form-group">
           <label>Plan Description</label>
-          <input type="text" id="plan-desc" placeholder="e.g. 4-day Upper/Lower split">
+          <input type="text" id="plan-desc" placeholder="e.g. 4-day PPL & Upper/Lower split">
         </div>
 
         <hr class="divider">
-        <h4>Workouts in Plan</h4>
-        <div id="plan-workouts-builder">
-          <!-- Workout item builders added dynamically -->
+        <h4>Scheduled Workout Dates</h4>
+        <p class="subtitle" style="margin-bottom: 12px;">Select routine templates and set their planned execution dates. Routines can be reused across multiple dates!</p>
+        <div id="plan-schedule-builder">
+          <!-- Scheduled workout rows added dynamically -->
         </div>
 
-        <button type="button" id="btn-add-workout-step" class="btn btn-secondary btn-sm">+ Add Workout to Plan</button>
+        <button type="button" id="btn-add-plan-schedule-step" class="btn btn-secondary btn-sm">+ Add Scheduled Workout Date</button>
 
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
-          <button type="submit" class="btn btn-accent">Save Plan</button>
+          <button type="submit" class="btn btn-accent">Save Training Plan</button>
         </div>
       </form>
     </div>

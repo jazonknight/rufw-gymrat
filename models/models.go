@@ -87,8 +87,9 @@ type Plan struct {
 
 // GymRatVaultData represents the outer wrapper for gymrat_plans.json serialization.
 type GymRatVaultData struct {
-	WorkoutPlans []Plan             `json:"workoutPlans"`
-	Workouts     []HistoricWorkouts `json:"workouts,omitempty"`
+	WorkoutPlans     []Plan             `json:"workoutPlans"`
+	WorkoutTemplates []Workout          `json:"workoutTemplates,omitempty"` // Standalone workout routines
+	Workouts         []HistoricWorkouts `json:"workouts,omitempty"`
 }
 
 // HistoricWorkouts tracks historical completed workout plan logs.

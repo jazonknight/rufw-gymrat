@@ -3,6 +3,7 @@
 const API_BASE = '/api';
 let activeSessionId = localStorage.getItem('gymrat_session_id') || '';
 let exerciseCatalog = [];
+let workoutRoutines = [];
 let workoutPlans = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -58,6 +59,7 @@ function initTabs() {
 // Data Fetching
 async function loadDashboardData() {
   await fetchExercises();
+  await fetchWorkouts();
   await fetchPlans();
 }
 
@@ -73,6 +75,18 @@ async function fetchExercises() {
   }
 }
 
+async function fetchWorkouts() {
+  try {
+    const res = await fetch(`${API_BASE}/workouts`, {
+      headers: { 'X-Session-ID': activeSessionId }
+    });
+    workoutRoutines = await res.json();
+    renderRoutines();
+  } catch (err) {
+    console.error('Error fetching workout routines:', err);
+  }
+}
+
 async function fetchPlans() {
   try {
     const res = await fetch(`${API_BASE}/plans`, {
@@ -85,18 +99,17 @@ async function fetchPlans() {
   }
 }
 
-// Render Exercise Catalog
+// TIER 1: Render Exercise Library
 function renderCatalog() {
   const grid = document.getElementById('catalog-grid');
   const showRemoved = document.getElementById('toggle-removed').checked;
   grid.innerHTML = '';
 
   if (!exerciseCatalog || exerciseCatalog.length === 0) {
-    grid.innerHTML = '<p class="subtitle">No exercises found. Click "+ New Exercise" to get started.</p>';
+    grid.innerHTML = '<p class="subtitle">No exercises found in library. Click "+ New Exercise".</p>';
     return;
   }
 
-  // Filter exercises
   const filtered = exerciseCatalog.filter(ex => showRemoved || !ex.isRemoved);
 
   filtered.forEach(ex => {
@@ -111,7 +124,7 @@ function renderCatalog() {
       <p class="ex-desc">${escapeHtml(ex.description || 'No description provided.')}</p>
       ${ex.isRemoved ? '<p class="tag-category" style="color: var(--accent-red)">Soft-Deleted (IsRemoved)</p>' : ''}
       <div class="card-actions">
-        <button class="btn btn-secondary btn-sm" onclick="openUpdateModal('${ex.id}')">Bump Version</button>
+        <button class="btn btn-secondary btn-sm" onclick="openUpdateExerciseModal('${ex.id}')">Bump Version</button>
         <button class="btn btn-secondary btn-sm" onclick="toggleSoftDelete('${ex.id}')">${ex.isRemoved ? 'Restore' : 'Soft Delete'}</button>
       </div>
     `;
@@ -119,13 +132,52 @@ function renderCatalog() {
   });
 }
 
-// Render Workout Plans
+// TIER 2: Render Workout Routines
+function renderRoutines() {
+  const grid = document.getElementById('routines-grid');
+  grid.innerHTML = '';
+
+  if (!workoutRoutines || workoutRoutines.length === 0) {
+    grid.innerHTML = '<p class="subtitle">No standalone workout routines created yet. Click "+ Create Workout Routine".</p>';
+    return;
+  }
+
+  workoutRoutines.forEach(routine => {
+    const card = document.createElement('div');
+    card.className = 'exercise-card';
+
+    let exSummary = '';
+    if (routine.exercises) {
+      Object.values(routine.exercises).forEach(we => {
+        let setsSummary = (we.sets || []).map(s => {
+          return s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight}lbs` : `${s.repCount} reps @ ${s.weight}lbs`;
+        }).join(' | ');
+        exSummary += `<div style="font-size: 0.85rem; margin-top: 4px;">• <strong>${escapeHtml(we.nameSnapshot || 'Exercise')}:</strong> ${setsSummary}</div>`;
+      });
+    }
+
+    card.innerHTML = `
+      <div class="card-top">
+        <h3 class="ex-title">${escapeHtml(routine.name)}</h3>
+        <span class="tag-version">Routine Template</span>
+      </div>
+      <p class="ex-desc">${escapeHtml(routine.description || 'Workout Routine Template')}</p>
+      ${exSummary}
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="deleteRoutine('${routine.id}')">Delete Routine</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// TIER 3: Render Training Plans
 function renderPlans() {
   const container = document.getElementById('plans-container');
   container.innerHTML = '';
 
   if (!workoutPlans || workoutPlans.length === 0) {
-    container.innerHTML = '<p class="subtitle">No workout plans created yet. Click "+ Create Plan".</p>';
+    container.innerHTML = '<p class="subtitle">No training plans created yet. Click "+ Create Training Plan".</p>';
     return;
   }
 
@@ -135,7 +187,10 @@ function renderPlans() {
 
     let workoutsHtml = '';
     if (plan.workouts && plan.workouts.length > 0) {
-      workoutsHtml = plan.workouts.map(w => {
+      // Sort workouts chronologically by DatePlanned
+      const sortedWorkouts = [...plan.workouts].sort((a, b) => new Date(a.datePlanned) - new Date(b.datePlanned));
+
+      workoutsHtml = sortedWorkouts.map(w => {
         let exHtml = '';
         if (w.exercises) {
           Object.values(w.exercises).forEach(we => {
@@ -147,10 +202,17 @@ function renderPlans() {
           });
         }
 
+        const dateStr = w.datePlanned ? new Date(w.datePlanned).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Unscheduled';
+
         return `
           <div class="workout-item ${w.isExecuted ? 'executed' : ''}">
             <div class="workout-item-header">
-              <h4>${escapeHtml(w.name)}</h4>
+              <div>
+                <h4>${escapeHtml(w.name)}</h4>
+                <div style="font-size: 0.78rem; color: var(--accent-cyan); font-weight: 600; margin-top: 2px;">
+                  📅 Planned Date: ${dateStr}
+                </div>
+              </div>
               <button class="btn btn-sm ${w.isExecuted ? 'btn-secondary' : 'btn-accent'}" onclick="toggleWorkoutExecuted('${plan.id}', '${w.id}', ${!w.isExecuted})">
                 ${w.isExecuted ? '✓ Executed' : 'Mark Executed'}
               </button>
@@ -166,12 +228,12 @@ function renderPlans() {
       <div class="plan-header">
         <div>
           <h3>${escapeHtml(plan.name)}</h3>
-          <p class="subtitle">${escapeHtml(plan.description || '')} • Planned: ${new Date(plan.datePlanned).toLocaleDateString()}</p>
+          <p class="subtitle">${escapeHtml(plan.description || '')} • ${plan.workouts ? plan.workouts.length : 0} Scheduled Sessions</p>
         </div>
         <span class="badge">${plan.status || 'Active'}</span>
       </div>
       <div class="workouts-subgrid">
-        ${workoutsHtml}
+        ${workoutsHtml || '<p class="subtitle">No workout instances scheduled in this plan.</p>'}
       </div>
     `;
     container.appendChild(card);
@@ -188,6 +250,18 @@ async function toggleSoftDelete(id) {
     await fetchExercises();
   } catch (err) {
     console.error('Error soft deleting exercise:', err);
+  }
+}
+
+async function deleteRoutine(id) {
+  try {
+    await fetch(`${API_BASE}/workouts?id=${id}`, {
+      method: 'DELETE',
+      headers: { 'X-Session-ID': activeSessionId }
+    });
+    await fetchWorkouts();
+  } catch (err) {
+    console.error('Error deleting routine:', err);
   }
 }
 
@@ -210,8 +284,10 @@ async function toggleWorkoutExecuted(planId, workoutId, isExecuted) {
 // Modals Setup
 function initModals() {
   const modalEx = document.getElementById('modal-exercise');
+  const modalRoutine = document.getElementById('modal-routine');
   const modalPlan = document.getElementById('modal-plan');
 
+  // Open Exercise Modal
   document.getElementById('btn-add-exercise').addEventListener('click', () => {
     document.getElementById('ex-id').value = '';
     document.getElementById('modal-exercise-title').textContent = 'New Exercise';
@@ -219,20 +295,32 @@ function initModals() {
     modalEx.classList.add('active');
   });
 
+  // Open Routine Modal
+  document.getElementById('btn-add-routine').addEventListener('click', () => {
+    document.getElementById('form-routine').reset();
+    document.getElementById('routine-exercises-builder').innerHTML = '';
+    addRoutineExerciseStep();
+    modalRoutine.classList.add('active');
+  });
+
+  // Open Plan Modal
   document.getElementById('btn-add-plan').addEventListener('click', () => {
     document.getElementById('form-plan').reset();
-    document.getElementById('plan-workouts-builder').innerHTML = '';
-    addWorkoutStep(); // default 1 workout row
+    document.getElementById('plan-schedule-builder').innerHTML = '';
+    addPlanScheduleStep(); // Add 1st scheduled workout row by default
     modalPlan.classList.add('active');
   });
 
+  // Close buttons
   document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
     btn.addEventListener('click', () => {
       modalEx.classList.remove('active');
+      modalRoutine.classList.remove('active');
       modalPlan.classList.remove('active');
     });
   });
 
+  // Exercise Form Submit
   document.getElementById('form-exercise').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('ex-id').value;
@@ -254,23 +342,23 @@ function initModals() {
     await fetchExercises();
   });
 
-  document.getElementById('btn-add-workout-step').addEventListener('click', addWorkoutStep);
+  document.getElementById('btn-add-routine-ex-step').addEventListener('click', addRoutineExerciseStep);
+  document.getElementById('btn-add-plan-schedule-step').addEventListener('click', addPlanScheduleStep);
 
-  document.getElementById('form-plan').addEventListener('submit', async (e) => {
+  // Routine Form Submit (Tier 2)
+  document.getElementById('form-routine').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('plan-name').value;
-    const description = document.getElementById('plan-desc').value;
+    const name = document.getElementById('routine-name').value;
+    const description = document.getElementById('routine-desc').value;
 
-    const workoutEls = document.querySelectorAll('.workout-builder-item');
-    const workouts = [];
+    const exEls = document.querySelectorAll('.routine-ex-builder-item');
+    const exercisesMap = {};
 
-    workoutEls.forEach(wEl => {
-      const wName = wEl.querySelector('.w-name').value;
-      const wDesc = wEl.querySelector('.w-desc').value;
-      const exSelect = wEl.querySelector('.w-ex-select');
-      const setType = wEl.querySelector('.w-set-type').value;
-      const valCount = parseInt(wEl.querySelector('.w-val').value) || 10;
-      const weight = parseFloat(wEl.querySelector('.w-weight').value) || 0;
+    exEls.forEach(el => {
+      const exSelect = el.querySelector('.r-ex-select');
+      const setType = el.querySelector('.r-set-type').value;
+      const valCount = parseInt(el.querySelector('.r-val').value) || 10;
+      const weight = parseFloat(el.querySelector('.r-weight').value) || 0;
 
       const selectedExId = exSelect.value;
       const selectedEx = exerciseCatalog.find(e => e.id === selectedExId) || { name: 'Custom Exercise', version: 1 };
@@ -284,7 +372,6 @@ function initModals() {
         perceivedEffort: 7
       };
 
-      const exercisesMap = {};
       if (selectedExId) {
         exercisesMap[selectedExId] = {
           exerciseId: selectedExId,
@@ -293,23 +380,65 @@ function initModals() {
           sets: [setObj]
         };
       }
+    });
 
-      workouts.push({
-        id: crypto.randomUUID(),
-        name: wName,
-        description: wDesc,
-        datePlanned: new Date().toISOString(),
-        isExecuted: false,
-        exercises: exercisesMap
-      });
+    const newRoutine = {
+      id: crypto.randomUUID(),
+      name,
+      description,
+      datePlanned: new Date().toISOString(),
+      isExecuted: false,
+      exercises: exercisesMap
+    };
+
+    await fetch(`${API_BASE}/workouts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-ID': activeSessionId
+      },
+      body: JSON.stringify(newRoutine)
+    });
+
+    modalRoutine.classList.remove('active');
+    await fetchWorkouts();
+  });
+
+  // Plan Form Submit (Tier 3 with Date Selection)
+  document.getElementById('form-plan').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('plan-name').value;
+    const description = document.getElementById('plan-desc').value;
+
+    const rowEls = document.querySelectorAll('.plan-schedule-row');
+    const selectedWorkouts = [];
+
+    rowEls.forEach(row => {
+      const rId = row.querySelector('.p-routine-select').value;
+      const dateVal = row.querySelector('.p-date-input').value;
+      const foundRoutine = workoutRoutines.find(r => r.id === rId);
+
+      if (foundRoutine) {
+        const plannedDate = dateVal ? new Date(dateVal + 'T00:00:00').toISOString() : new Date().toISOString();
+
+        selectedWorkouts.push({
+          id: crypto.randomUUID(),
+          name: foundRoutine.name,
+          description: foundRoutine.description,
+          datePlanned: plannedDate,
+          isExecuted: false,
+          exercises: JSON.parse(JSON.stringify(foundRoutine.exercises || {}))
+        });
+      }
     });
 
     const newPlan = {
+      id: crypto.randomUUID(),
       name,
       description,
       status: 'active',
       datePlanned: new Date().toISOString(),
-      workouts
+      workouts: selectedWorkouts
     };
 
     await fetch(`${API_BASE}/plans`, {
@@ -326,7 +455,7 @@ function initModals() {
   });
 }
 
-function openUpdateModal(id) {
+function openUpdateExerciseModal(id) {
   const ex = exerciseCatalog.find(e => e.id === id);
   if (!ex) return;
 
@@ -338,43 +467,60 @@ function openUpdateModal(id) {
   document.getElementById('modal-exercise').classList.add('active');
 }
 
-function addWorkoutStep() {
-  const container = document.getElementById('plan-workouts-builder');
+function addRoutineExerciseStep() {
+  const container = document.getElementById('routine-exercises-builder');
   const index = container.children.length + 1;
 
   let optionsHtml = exerciseCatalog.map(ex => `<option value="${ex.id}">${escapeHtml(ex.name)} (v${ex.version})</option>`).join('');
 
   const div = document.createElement('div');
-  div.className = 'workout-builder-item';
+  div.className = 'routine-ex-builder-item';
   div.style.cssText = 'background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid var(--border-color)';
   div.innerHTML = `
     <div class="form-group">
-      <label>Workout #${index} Name</label>
-      <input type="text" class="w-name" required value="Workout ${index}">
-    </div>
-    <div class="form-group">
-      <label>Description</label>
-      <input type="text" class="w-desc" placeholder="Target focus">
-    </div>
-    <div class="form-group">
-      <label>Select Exercise from Catalog</label>
-      <select class="w-ex-select">${optionsHtml || '<option value="">No Catalog Exercises Available</option>'}</select>
+      <label>Select Exercise #${index} from Library</label>
+      <select class="r-ex-select">${optionsHtml || '<option value="">No Library Exercises Available</option>'}</select>
     </div>
     <div style="display: flex; gap: 10px;">
       <div class="form-group" style="flex: 1;">
         <label>Set Type</label>
-        <select class="w-set-type">
+        <select class="r-set-type">
           <option value="reps">Counting Sets (Reps)</option>
           <option value="timed">Timed Sets (Seconds)</option>
         </select>
       </div>
       <div class="form-group" style="flex: 1;">
         <label>Reps or Duration (sec)</label>
-        <input type="number" class="w-val" value="10">
+        <input type="number" class="r-val" value="10">
       </div>
       <div class="form-group" style="flex: 1;">
         <label>Weight (lbs)</label>
-        <input type="number" class="w-weight" value="45">
+        <input type="number" class="r-weight" value="45">
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function addPlanScheduleStep() {
+  const container = document.getElementById('plan-schedule-builder');
+  const index = container.children.length + 1;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let routinesHtml = workoutRoutines.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+
+  const div = document.createElement('div');
+  div.className = 'plan-schedule-row';
+  div.style.cssText = 'background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid var(--border-color)';
+  div.innerHTML = `
+    <div style="display: flex; gap: 12px; align-items: flex-end;">
+      <div class="form-group" style="flex: 2; margin-bottom: 0;">
+        <label>Session #${index} Routine Template</label>
+        <select class="p-routine-select">${routinesHtml || '<option value="">No Routine Templates Available</option>'}</select>
+      </div>
+      <div class="form-group" style="flex: 1; margin-bottom: 0;">
+        <label>Planned Date</label>
+        <input type="date" class="p-date-input" value="${todayStr}">
       </div>
     </div>
   `;
@@ -386,7 +532,6 @@ function initUpload() {
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const btnBrowse = document.getElementById('btn-browse-file');
-  const statusMsg = document.getElementById('upload-status');
 
   btnBrowse.addEventListener('click', () => fileInput.click());
 
