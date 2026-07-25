@@ -106,7 +106,7 @@ Once running, open your web browser to:
 
 ---
 
-### 3. Docker & Cloudflare Tunnel Deployment 🐳
+### 3. Docker Deployment 🐳
 
 GymRat includes a multi-stage `Dockerfile` and `docker-compose.yml` pre-configured for Cloudflare Tunnel (`gymrat.rufw.io`).
 
@@ -115,11 +115,6 @@ GymRat includes a multi-stage `Dockerfile` and `docker-compose.yml` pre-configur
 docker compose up -d --build
 ```
 
-#### Launch with Cloudflare Tunnel Service:
-Copy `.env.example` to `.env`, set your `TUNNEL_TOKEN` from the Cloudflare Zero Trust Dashboard, and run:
-```bash
-docker compose --profile cloudflare up -d --build
-```
 
 #### Environment Variables (`.env`):
 
