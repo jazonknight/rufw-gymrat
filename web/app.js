@@ -216,9 +216,10 @@ function renderRoutines() {
       </div>
       <p class="ex-desc">${escapeHtml(routine.description || 'Workout Routine Template')}</p>
       ${exSummary}
-      <div class="card-actions">
+      <div class="card-actions" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
         <button class="btn btn-primary btn-sm" onclick="copyWorkoutTemplate('${routine.id}')">📋 Duplicate Routine</button>
-        <button class="btn btn-secondary btn-sm" onclick="deleteRoutine('${routine.id}')">Delete Routine</button>
+        <button class="btn btn-secondary btn-sm" onclick="editRoutine('${routine.id}')">✏️ Edit Routine</button>
+        <button class="btn btn-secondary btn-sm" style="color: var(--accent-rose);" onclick="deleteRoutine('${routine.id}')">🗑️ Delete</button>
       </div>
     `;
     grid.appendChild(card);
@@ -659,16 +660,13 @@ function initModals() {
       body: JSON.stringify({ id, name, category, description })
     });
 
-    modalEx.classList.remove('active');
-    await fetchExercises();
-  });
-
   document.getElementById('btn-add-routine-ex-step').addEventListener('click', addRoutineExerciseStep);
   document.getElementById('btn-add-plan-schedule-step').addEventListener('click', addPlanScheduleStep);
 
-  // Routine Form Submit (Multi-Set Builder)
+  // Routine Form Submit (Multi-Set Builder & Edit Support)
   document.getElementById('form-routine').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const routineId = document.getElementById('routine-id').value;
     const name = document.getElementById('routine-name').value;
     const description = document.getElementById('routine-desc').value;
 
@@ -677,7 +675,7 @@ function initModals() {
 
     exEls.forEach(el => {
       const exSelect = el.querySelector('.r-ex-select');
-      const selectedExId = exSelect.value;
+      const selectedExId = exSelect ? exSelect.value : '';
       const selectedEx = exerciseCatalog.find(e => e.id === selectedExId) || { name: 'Custom Exercise', version: 1 };
 
       const setRows = el.querySelectorAll('.routine-set-row');
@@ -708,8 +706,8 @@ function initModals() {
       }
     });
 
-    const newRoutine = {
-      id: crypto.randomUUID(),
+    const targetRoutine = {
+      id: routineId || crypto.randomUUID(),
       name,
       description,
       datePlanned: new Date().toISOString(),
@@ -717,16 +715,17 @@ function initModals() {
       exercises: exercisesMap
     };
 
+    const method = routineId ? 'PUT' : 'POST';
     await fetch(`${API_BASE}/workouts`, {
-      method: 'POST',
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         'X-Session-ID': activeSessionId
       },
-      body: JSON.stringify(newRoutine)
+      body: JSON.stringify(targetRoutine)
     });
 
-    modalRoutine.classList.remove('active');
+    document.getElementById('modal-routine').classList.remove('active');
     await fetchWorkouts();
   });
 
@@ -793,12 +792,38 @@ function openUpdateExerciseModal(id) {
   document.getElementById('modal-exercise').classList.add('active');
 }
 
-function addRoutineExerciseStep() {
+function editRoutine(routineId) {
+  const routine = workoutRoutines.find(r => r.id === routineId);
+  if (!routine) return;
+
+  document.getElementById('routine-id').value = routine.id;
+  document.getElementById('routine-name').value = routine.name;
+  document.getElementById('routine-desc').value = routine.description || '';
+  document.getElementById('modal-routine-title').textContent = 'Edit Workout Routine';
+
+  const builder = document.getElementById('routine-exercises-builder');
+  builder.innerHTML = '';
+
+  if (routine.exercises && Object.keys(routine.exercises).length > 0) {
+    Object.values(routine.exercises).forEach(we => {
+      addRoutineExerciseStep(we);
+    });
+  } else {
+    addRoutineExerciseStep();
+  }
+
+  document.getElementById('modal-routine').classList.add('active');
+}
+
+function addRoutineExerciseStep(existingWe = null) {
   const container = document.getElementById('routine-exercises-builder');
   const index = container.children.length + 1;
   const exIdIndex = `ex_builder_${Date.now()}_${index}`;
 
-  let optionsHtml = exerciseCatalog.map(ex => `<option value="${ex.id}">${escapeHtml(ex.name)} (v${ex.version})</option>`).join('');
+  let optionsHtml = exerciseCatalog.map(ex => {
+    const isSel = existingWe && existingWe.exerciseId === ex.id ? 'selected' : '';
+    return `<option value="${ex.id}" ${isSel}>${escapeHtml(ex.name)} (v${ex.version})</option>`;
+  }).join('');
 
   const div = document.createElement('div');
   div.className = 'routine-ex-builder-item';
@@ -817,17 +842,24 @@ function addRoutineExerciseStep() {
   `;
   container.appendChild(div);
 
-  // Add 3 default set rows for convenient workout routine building
-  addSetRowToRoutine(`sets_container_${exIdIndex}`);
-  addSetRowToRoutine(`sets_container_${exIdIndex}`);
-  addSetRowToRoutine(`sets_container_${exIdIndex}`);
+  if (existingWe && existingWe.sets && existingWe.sets.length > 0) {
+    existingWe.sets.forEach(s => addSetRowToRoutine(`sets_container_${exIdIndex}`, s));
+  } else {
+    // Add 3 default set rows for convenient workout routine building
+    addSetRowToRoutine(`sets_container_${exIdIndex}`);
+    addSetRowToRoutine(`sets_container_${exIdIndex}`);
+    addSetRowToRoutine(`sets_container_${exIdIndex}`);
+  }
 }
 
-function addSetRowToRoutine(containerId) {
+function addSetRowToRoutine(containerId, setObj = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const setIndex = container.children.length + 1;
+  const setType = setObj ? (setObj.setType || 'reps') : 'reps';
+  const valCount = setObj ? (setType === 'timed' ? (setObj.durationSeconds || 30) : (setObj.repCount || 10)) : 10;
+  const weight = setObj ? (setObj.weight || 0) : 45;
 
   const setRow = document.createElement('div');
   setRow.className = 'routine-set-row';
@@ -836,15 +868,15 @@ function addSetRowToRoutine(containerId) {
     <span style="font-size: 0.85rem; font-weight: 600; width: 45px;">Set ${setIndex}</span>
     <div style="flex: 1;">
       <select class="r-set-type" style="padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
-        <option value="reps">Counting (Reps)</option>
-        <option value="timed">Timed (Seconds)</option>
+        <option value="reps" ${setType === 'reps' ? 'selected' : ''}>Counting (Reps)</option>
+        <option value="timed" ${setType === 'timed' ? 'selected' : ''}>Timed (Seconds)</option>
       </select>
     </div>
     <div style="flex: 1;">
-      <input type="number" class="r-val" value="10" placeholder="Reps/Sec" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+      <input type="number" class="r-val" value="${valCount}" placeholder="Reps/Sec" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
     </div>
     <div style="flex: 1;">
-      <input type="number" class="r-weight" value="45" placeholder="Weight (lbs)" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+      <input type="number" class="r-weight" value="${weight}" placeholder="Weight (lbs)" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
     </div>
   `;
   container.appendChild(setRow);
