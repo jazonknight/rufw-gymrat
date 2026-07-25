@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Session Lifecycle
 async function createNewSession() {
   try {
+    const el = document.getElementById('active-session-id');
+    if (el) el.textContent = 'Creating...';
+
     const res = await fetch(`${API_BASE}/session/new`, { method: 'POST' });
     const data = await res.json();
     activeSessionId = data.sessionId;
@@ -42,11 +45,16 @@ async function createNewSession() {
     await loadDashboardData();
   } catch (err) {
     console.error('Failed to create new session:', err);
+    const el = document.getElementById('active-session-id');
+    if (el) el.textContent = 'Error Connecting';
   }
 }
 
 function updateSessionUI(id) {
-  document.getElementById('active-session-id').textContent = id.substring(0, 8) + '...';
+  const el = document.getElementById('active-session-id');
+  if (el) {
+    el.textContent = id ? id.substring(0, 8) + '...' : 'Initializing...';
+  }
 }
 
 // Navigation Tabs
@@ -78,11 +86,18 @@ async function fetchExercises() {
     const res = await fetch(`${API_BASE}/exercises`, {
       headers: { 'X-Session-ID': activeSessionId }
     });
-    exerciseCatalog = await res.json();
+    if (!res.ok) {
+      console.warn('Invalid session response, initializing new session...');
+      await createNewSession();
+      return;
+    }
+    const data = await res.json();
+    exerciseCatalog = Array.isArray(data) ? data : [];
     updateCategoryDropdownOptions();
     renderCatalog();
   } catch (err) {
     console.error('Error fetching exercises:', err);
+    exerciseCatalog = [];
   }
 }
 
@@ -91,10 +106,13 @@ async function fetchWorkouts() {
     const res = await fetch(`${API_BASE}/workouts`, {
       headers: { 'X-Session-ID': activeSessionId }
     });
-    workoutRoutines = await res.json();
+    if (!res.ok) return;
+    const data = await res.json();
+    workoutRoutines = Array.isArray(data) ? data : [];
     renderRoutines();
   } catch (err) {
     console.error('Error fetching workout routines:', err);
+    workoutRoutines = [];
   }
 }
 
@@ -103,10 +121,28 @@ async function fetchPlans() {
     const res = await fetch(`${API_BASE}/plans`, {
       headers: { 'X-Session-ID': activeSessionId }
     });
-    workoutPlans = await res.json();
+    if (!res.ok) return;
+    const data = await res.json();
+    workoutPlans = Array.isArray(data) ? data : [];
     renderPlans();
   } catch (err) {
     console.error('Error fetching plans:', err);
+    workoutPlans = [];
+  }
+}
+
+async function fetchHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/history`, {
+      headers: { 'X-Session-ID': activeSessionId }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    historyLogs = Array.isArray(data) ? data : [];
+    renderHistory();
+  } catch (err) {
+    console.error('Error fetching history:', err);
+    historyLogs = [];
   }
 }
 
@@ -659,6 +695,10 @@ function initModals() {
       },
       body: JSON.stringify({ id, name, category, description })
     });
+
+    modalEx.classList.remove('active');
+    await fetchExercises();
+  });
 
   document.getElementById('btn-add-routine-ex-step').addEventListener('click', addRoutineExerciseStep);
   document.getElementById('btn-add-plan-schedule-step').addEventListener('click', addPlanScheduleStep);

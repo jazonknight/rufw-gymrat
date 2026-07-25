@@ -73,6 +73,7 @@ func (s *Server) Start() error {
 		fileServer := http.FileServer(http.Dir(s.WebDir))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 				fileServer.ServeHTTP(w, r)
 				return
 			}
