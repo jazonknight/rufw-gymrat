@@ -1,0 +1,31 @@
+# Compiled binaries
+gymrat
+gymrat.exe
+*.exe
+*.exe?
+*.dll
+*.so
+*.dylib
+
+# Test & runtime data files
+gymrat_vault.json
+data/sessions/*
+!data/sessions/.gitkeep
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
