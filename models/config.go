@@ -42,6 +42,15 @@ func IsValidUnit(input string) bool {
 	}
 }
 
+func IsValidSetType(input string) bool {
+	switch SetType(input) {
+	case SetTypeReps, SetTypeTimed:
+		return true
+	default:
+		return false
+	}
+}
+
 func GetMeAValidMaxValue(str string, isZeroAllowed bool, maxAllowed int) (int, error) {
 
 	defaultZero := 0

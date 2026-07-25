@@ -1,45 +1,65 @@
+// Main entry point for the GymRat application.
+// Supports running in interactive terminal CLI mode or launching the REST API server & Web UI dashboard.
 package main
 
 import (
+	"flag"
 	"fmt"
-	"gymrat/cmd"
-	"gymrat/models" // Double check that this matches your go.mod module name
 	"os"
+	"path/filepath"
+
+	"gymrat/cmd"
+	"gymrat/models"
+	"gymrat/server"
+	"gymrat/storage"
 )
 
 func main() {
+	serverMode := flag.Bool("server", false, "Start GymRat REST API Server & Web UI")
+	port := flag.String("port", "8080", "Port for REST API Server")
+	sessionDir := flag.String("sessions-dir", filepath.Join(".", "data", "sessions"), "Base directory for sessions")
+	flag.Parse()
+
 	targetDir := "."
-	targetFile := "gymrat_vault.json"
+	exercisesFile := storage.DefaultExercisesFilename
+	plansFile := storage.DefaultPlansFilename
+
 	fmt.Println("---- RupertFrameworks: GymRat Boot Sequence ----")
 
-	gymVault, err := LoadVault(targetDir, targetFile)
-
+	sessionMgr, err := storage.NewSessionManager(*sessionDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("File Not Found, We need to create a new one here")
-			// This is where we save vault
-			gymVault = models.GymRatVaultData{
-				WorkoutPlans: []models.Plan{},
-				Workouts:     []models.HistoricWorkouts{},
-			}
+		fmt.Printf("Fatal Error initializing session manager: %v\n", err)
+		os.Exit(1)
+	}
 
-			err = SaveVault(targetDir, targetFile, gymVault)
-			if err != nil {
-				fmt.Printf("Save Error Found:%v \n", err)
-				return
-			}
-
-			fmt.Println("File Actually Written")
-			return
-		} else {
-			fmt.Printf("Fatal Error reading file: %v\n", err)
-			return // dont contiune
+	if *serverMode {
+		webDir := filepath.Join(".", "web")
+		srv := server.NewServer(sessionMgr, webDir, *port)
+		if err := srv.Start(); err != nil {
+			fmt.Printf("Server Error: %v\n", err)
+			os.Exit(1)
 		}
-	} else {
-		fmt.Println("GymRat Vault Loaded Successfully")
-		fmt.Printf("Loaded Struct Memory Address: %+v\n", gymVault)
-		cmd.MenuCLI(&gymVault, targetDir, targetFile)
 		return
 	}
 
+	// CLI Mode: Load catalog and plans from targetDir
+	catalog, err := LoadExercises(targetDir, exercisesFile)
+	if err != nil {
+		fmt.Printf("Notice reading exercises file: %v. Initializing empty catalog.\n", err)
+		catalog = models.ExerciseCatalogData{Exercises: []models.Exercise{}}
+		_ = SaveExercises(targetDir, exercisesFile, catalog)
+	}
+
+	vault, err := LoadVault(targetDir, plansFile)
+	if err != nil {
+		fmt.Printf("Notice reading plans file: %v. Initializing empty vault.\n", err)
+		vault = models.GymRatVaultData{WorkoutPlans: []models.Plan{}}
+		_ = SaveVault(targetDir, plansFile, vault)
+	}
+
+	fmt.Println("GymRat Catalog & Vault Loaded Successfully")
+	if err := cmd.MenuCLI(&catalog, &vault, targetDir, exercisesFile, plansFile); err != nil {
+		fmt.Printf("CLI exited with error: %v\n", err)
+	}
 }
+

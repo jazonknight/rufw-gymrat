@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GymRat Vault & Workout Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header / Top Bar -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon">🏋️‍♂️</div>
+        <div class="logo-text">
+          <h1>GymRat <span class="badge">v2.0</span></h1>
+          <p class="subtitle">Vault, Versioned Exercises & Workout Planner</p>
+        </div>
+      </div>
+      <div class="session-bar">
+        <div class="session-info">
+          <span class="label">Session ID:</span>
+          <span id="active-session-id" class="session-id">Initializing...</span>
+        </div>
+        <button id="btn-new-session" class="btn btn-secondary">New Session</button>
+        <button id="btn-export-vault" class="btn btn-primary">⚡ Export JSON</button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="catalog">📦 Exercise Catalog</button>
+      <button class="tab-btn" data-tab="plans">📋 Workout Plans</button>
+      <button class="tab-btn" data-tab="upload">📤 Import / Export Vault</button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- TAB 1: EXERCISE CATALOG -->
+      <section id="tab-catalog" class="tab-content active">
+        <div class="section-header">
+          <div>
+            <h2>Exercise Catalog</h2>
+            <p>Independent exercise definitions with version history & soft deletion.</p>
+          </div>
+          <div class="actions-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="toggle-removed" checked>
+              <span>Show Soft-Deleted</span>
+            </label>
+            <button id="btn-add-exercise" class="btn btn-accent">+ New Exercise</button>
+          </div>
+        </div>
+
+        <div id="catalog-grid" class="cards-grid">
+          <!-- Exercise cards injected by app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 2: WORKOUT PLANS -->
+      <section id="tab-plans" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2>Workout Plans & Workouts</h2>
+            <p>Plans containing scheduled workouts, date tracking, and execution status.</p>
+          </div>
+          <button id="btn-add-plan" class="btn btn-accent">+ Create Plan</button>
+        </div>
+
+        <div id="plans-container" class="plans-list">
+          <!-- Plans injected by app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 3: IMPORT / EXPORT -->
+      <section id="tab-upload" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2>Vault Data Sync</h2>
+            <p>Upload existing GymRat JSON files or export current session snapshot.</p>
+          </div>
+        </div>
+
+        <div class="upload-card">
+          <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">📁</div>
+            <h3>Upload Vault JSON</h3>
+            <p>Select or drag and drop your exported <code>gymrat_vault.json</code> bundle</p>
+            <input type="file" id="file-input" accept=".json" class="file-input">
+            <button id="btn-browse-file" class="btn btn-primary">Browse File</button>
+          </div>
+          <div id="upload-status" class="status-msg"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: ADD / UPDATE EXERCISE -->
+  <div id="modal-exercise" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-exercise-title">New Exercise</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-exercise">
+        <input type="hidden" id="ex-id">
+        <div class="form-group">
+          <label>Exercise Name</label>
+          <input type="text" id="ex-name" required placeholder="e.g. Barbell Squat">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <input type="text" id="ex-category" required placeholder="e.g. Legs / Quad Dominant">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="ex-desc" rows="3" placeholder="Form cues, tempo, equipment..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Exercise</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE PLAN -->
+  <div id="modal-plan" class="modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>Create Workout Plan</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-plan">
+        <div class="form-group">
+          <label>Plan Name</label>
+          <input type="text" id="plan-name" required placeholder="e.g. 12-Week Hypertrophy Phase 1">
+        </div>
+        <div class="form-group">
+          <label>Plan Description</label>
+          <input type="text" id="plan-desc" placeholder="e.g. 4-day Upper/Lower split">
+        </div>
+
+        <hr class="divider">
+        <h4>Workouts in Plan</h4>
+        <div id="plan-workouts-builder">
+          <!-- Workout item builders added dynamically -->
+        </div>
+
+        <button type="button" id="btn-add-workout-step" class="btn btn-secondary btn-sm">+ Add Workout to Plan</button>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

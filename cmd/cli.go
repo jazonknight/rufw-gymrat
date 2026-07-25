@@ -1,19 +1,19 @@
+// Package cmd implements the interactive terminal command-line interface (CLI) for GymRat.
 package cmd
 
 import (
 	"fmt"
 	"gymrat/models"
+	"gymrat/storage"
 	"io"
 	"os"
 )
 
-func MenuCLI(vault *models.GymRatVaultData, dir string, filename string) error {
-	// output the menu
-
+// MenuCLI runs the primary interactive menu loop for managing exercise catalogs and workout plans.
+func MenuCLI(catalog *models.ExerciseCatalogData, vault *models.GymRatVaultData, dir string, exercisesFile string, plansFile string) error {
 	var defaultErrorWriter io.Writer = os.Stderr
 
 	for {
-
 		ShowMenuOptionsCLI()
 
 		choice, err := ReadLine()
@@ -22,48 +22,64 @@ func MenuCLI(vault *models.GymRatVaultData, dir string, filename string) error {
 			return err
 		}
 
-		fmt.Printf("User Successfully selected an option: %s\n", choice)
-
 		switch choice {
 		case "1":
-			ShowWorkoutPlansCLI(vault.WorkoutPlans)
+			HandleShowCatalog(catalog)
 		case "2":
-
-			fmt.Printf("Enter Plan search criteria i.e Id or Name:>")
+			if err := HandleAddExercise(catalog); err != nil {
+				fmt.Fprintf(defaultErrorWriter, "error adding exercise: %v\n", err)
+			} else {
+				_ = storage.SaveExercises(dir, exercisesFile, *catalog)
+			}
+		case "3":
+			if err := HandleUpdateExercise(catalog); err != nil {
+				fmt.Fprintf(defaultErrorWriter, "error updating exercise: %v\n", err)
+			} else {
+				_ = storage.SaveExercises(dir, exercisesFile, *catalog)
+			}
+		case "4":
+			if err := HandleSoftDeleteExercise(catalog); err != nil {
+				fmt.Fprintf(defaultErrorWriter, "error toggling soft delete: %v\n", err)
+			} else {
+				_ = storage.SaveExercises(dir, exercisesFile, *catalog)
+			}
+		case "5":
+			ShowWorkoutPlansCLI(vault.WorkoutPlans)
+		case "6":
+			fmt.Printf("Enter Plan search criteria (ID or Name): ")
 			choosePlan, err := ReadLine()
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Searching for plan...\n")
-
 			foundPlan := false
 			for _, p := range vault.WorkoutPlans {
-
 				if p.Id == choosePlan || p.Name == choosePlan {
 					ShowWorkoutPlanCLI(p)
 					foundPlan = true
 					break
 				}
 			}
-
 			if !foundPlan {
-				fmt.Println("info:  No matching plan found.")
+				fmt.Println("info: No matching plan found.")
 			}
-		case "3":
-			err := HandleCreateWorkoutPlan(vault)
-			if err != nil {
-				fmt.Fprintf(defaultErrorWriter, "error: failed to add workout plan: %v\n", err)
-				return err
+		case "7":
+			if err := HandleCreateWorkoutPlan(catalog, vault); err != nil {
+				fmt.Fprintf(defaultErrorWriter, "error creating plan: %v\n", err)
+			} else {
+				_ = storage.SaveVault(dir, plansFile, *vault)
 			}
-
-		case "5":
-			fmt.Println("Closing the vault. Session Over!")
-			return nil // kills the loop
+		case "8":
+			if err := HandleMarkWorkoutExecuted(vault); err != nil {
+				fmt.Fprintf(defaultErrorWriter, "error marking workout executed: %v\n", err)
+			} else {
+				_ = storage.SaveVault(dir, plansFile, *vault)
+			}
+		case "9":
+			fmt.Println("Closing GymRat CLI. Goodbye!")
+			return nil
 		default:
-			fmt.Printf("\ninfo: You typed: %s, that is not a option yet!\n", choice)
+			fmt.Printf("\nInvalid option: '%s'. Please select a valid number (1-9).\n", choice)
 		}
-
 	}
-
-	//return nil
 }
+

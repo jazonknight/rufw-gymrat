@@ -5,208 +5,360 @@ import (
 	"fmt"
 	"gymrat/models"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-func GetSetInput(setInput *models.ExerciseSet) error {
+// HandleShowCatalog prints exercises in the catalog
+func HandleShowCatalog(catalog *models.ExerciseCatalogData) {
+	fmt.Println("\n--- Exercise Catalog ---")
+	if len(catalog.Exercises) == 0 {
+		fmt.Println("Catalog is empty.")
+		return
+	}
 
-	// ask for reps
-	reps, err := GetNumberOfReps(string(setInput.FrequencyUnit))
+	for _, ex := range catalog.Exercises {
+		status := "Active"
+		if ex.IsRemoved {
+			status = "Removed (Soft-deleted)"
+		}
+		fmt.Printf("ID: %s | Ver: %d | Name: %s | Category: %s | Status: %s | Description: %s\n",
+			ex.Id, ex.Version, ex.Name, ex.Category, status, ex.Description)
+	}
+}
+
+// HandleAddExercise adds a new exercise to the catalog (version 1)
+func HandleAddExercise(catalog *models.ExerciseCatalogData) error {
+	fmt.Println("\n-- Add New Exercise to Catalog --")
+	name, err := promptInput("Enter Exercise Name: ")
 	if err != nil {
 		return err
 	}
-	setInput.RepCount = reps
 
-	// ask for effort
-	effort, err := GetPreceivedEffort()
+	description, err := promptInput("Enter Exercise Description: ")
 	if err != nil {
 		return err
 	}
-	setInput.PerceivedEffort = effort
 
+	category, err := promptInput("Enter Category (e.g. Legs, Chest, Cardio): ")
+	if err != nil {
+		return err
+	}
+
+	newEx := models.Exercise{
+		Id:          uuid.NewString(),
+		Version:     1,
+		Name:        name,
+		Description: description,
+		Category:    category,
+		IsRemoved:   false,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	catalog.Exercises = append(catalog.Exercises, newEx)
+	PrintSuccess(fmt.Sprintf("Exercise added successfully! ID: %s (Version 1)", newEx.Id))
 	return nil
 }
 
-func GetPreceivedEffort() (int, error) {
+// HandleUpdateExercise creates a new version of an exercise in the catalog
+func HandleUpdateExercise(catalog *models.ExerciseCatalogData) error {
+	fmt.Println("\n-- Update Exercise (Creates New Version) --")
+	HandleShowCatalog(catalog)
 
-	fmt.Printf("Please input the level of Preceived effort for this set (0-%d):>",
-		maxUnitValues[models.UnitType("effort")])
-
-	inputChoiceEffort, err := ReadLine()
+	exId, err := promptInput("\nEnter Exercise ID to update: ")
 	if err != nil {
-		return 0, err
-	}
-	effortCount, err := strconv.Atoi(inputChoiceEffort)
-	if err != nil {
-		return 0, err
+		return err
 	}
 
-	return effortCount, nil
+	var latestEx *models.Exercise
+	for i := range catalog.Exercises {
+		if catalog.Exercises[i].Id == exId {
+			if latestEx == nil || catalog.Exercises[i].Version > latestEx.Version {
+				latestEx = &catalog.Exercises[i]
+			}
+		}
+	}
+
+	if latestEx == nil {
+		return errors.New("exercise ID not found")
+	}
+
+	newName, err := promptInput(fmt.Sprintf("New Name [%s]: ", latestEx.Name))
+	if err != nil {
+		return err
+	}
+	if newName == "" {
+		newName = latestEx.Name
+	}
+
+	newDesc, err := promptInput(fmt.Sprintf("New Description [%s]: ", latestEx.Description))
+	if err != nil {
+		return err
+	}
+	if newDesc == "" {
+		newDesc = latestEx.Description
+	}
+
+	newCat, err := promptInput(fmt.Sprintf("New Category [%s]: ", latestEx.Category))
+	if err != nil {
+		return err
+	}
+	if newCat == "" {
+		newCat = latestEx.Category
+	}
+
+	updatedEx := models.Exercise{
+		Id:          latestEx.Id,
+		Version:     latestEx.Version + 1,
+		Name:        newName,
+		Description: newDesc,
+		Category:    newCat,
+		IsRemoved:   latestEx.IsRemoved,
+		CreatedAt:   latestEx.CreatedAt,
+		UpdatedAt:   time.Now(),
+	}
+
+	catalog.Exercises = append(catalog.Exercises, updatedEx)
+	PrintSuccess(fmt.Sprintf("Exercise '%s' updated to Version %d!", updatedEx.Name, updatedEx.Version))
+	return nil
 }
 
-func GetNumberOfReps(freqUnit string) (int, error) {
-
-	fmt.Printf("Please input the number of Reps for this set max allowed (1-%d):>",
-		maxUnitValues[models.UnitType(freqUnit)])
-	inputChoiceReps, err := ReadLine()
+// HandleSoftDeleteExercise toggles the IsRemoved soft delete status
+func HandleSoftDeleteExercise(catalog *models.ExerciseCatalogData) error {
+	fmt.Println("\n-- Toggle Exercise Soft Delete (IsRemoved) --")
+	exId, err := promptInput("Enter Exercise ID: ")
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	repCount, err := strconv.Atoi(inputChoiceReps)
-	if err != nil {
-		return 0, err
+	found := false
+	for i := range catalog.Exercises {
+		if catalog.Exercises[i].Id == exId {
+			catalog.Exercises[i].IsRemoved = !catalog.Exercises[i].IsRemoved
+			catalog.Exercises[i].UpdatedAt = time.Now()
+			found = true
+			PrintSuccess(fmt.Sprintf("Exercise %s (Version %d) IsRemoved set to %v",
+				catalog.Exercises[i].Name, catalog.Exercises[i].Version, catalog.Exercises[i].IsRemoved))
+		}
 	}
 
-	if repCount < 1 {
-		return 0, errors.New("reps must be at least 1 or more")
+	if !found {
+		return errors.New("no exercise found with provided ID")
 	}
-
-	return repCount, nil
+	return nil
 }
 
-func GetFreqUnit() (string, error) {
-	var setUnit string
+// HandleCreateWorkoutPlan guides user through building a Plan with Workouts and Sets
+func HandleCreateWorkoutPlan(catalog *models.ExerciseCatalogData, vault *models.GymRatVaultData) error {
+	fmt.Println("\n-- Create Workout Plan --")
 
-	fmt.Printf("\nFor this workout what type of sets do you plan to use? \n")
+	planName, err := promptInput("Enter Plan Name: ")
+	if err != nil {
+		return err
+	}
 
-	for {
-		fmt.Printf("Please input one of the options: (secs) or (count) :>")
-		inputChoiceFreqUnit, err := ReadLine()
+	planDescription, err := promptInput("Enter Plan Description: ")
+	if err != nil {
+		return err
+	}
+
+	countWorkouts, err := promptInt("How many workouts in this plan?: ")
+	if err != nil {
+		return err
+	}
+
+	workouts := make([]models.Workout, 0, countWorkouts)
+
+	for i := 0; i < countWorkouts; i++ {
+		fmt.Printf("\n--- Workout #%d Config ---\n", i+1)
+		wName, err := promptInput("Enter Workout Name (e.g., Lower Body A): ")
 		if err != nil {
-			return "", err
+			return err
 		}
 
-		switch inputChoiceFreqUnit {
-		case "secs":
-			setUnit = "seconds"
-		case "count":
-			setUnit = "count"
-		default:
-			fmt.Println("\nError | choice invalid please try again ")
-			continue // contiune until valid input is used
+		wDesc, err := promptInput("Enter Workout Description: ")
+		if err != nil {
+			return err
 		}
 
-		fmt.Printf("\nSelected a valid choice: %s \n", inputChoiceFreqUnit)
+		workoutExercises, err := collectWorkoutExercises(catalog)
+		if err != nil {
+			return err
+		}
 
-		break // break out once valid input has been provided
-	}
-	return setUnit, nil
-}
+		workout := models.Workout{
+			Id:          uuid.NewString(),
+			Name:        wName,
+			Description: wDesc,
+			DatePlanned: time.Now(),
+			IsExecuted:  false,
+			Exercises:   workoutExercises,
+		}
 
-func GetMaxPerUnit(str string) (int, error) {
-
-	if maxValue, exists := maxUnitValues[models.UnitType(str)]; exists {
-		return maxValue, nil
-	}
-
-	return 0, errors.New("error: invalid unit provided")
-
-}
-
-// HandleCreateWorkoutPlan guides the user through creating and saving a plan
-func HandleCreateWorkoutPlan(vault *models.GymRatVaultData) error {
-	fmt.Printf("-- Adding a workout Plan Started -- \n")
-
-	planName, err := promptInput("\nEnter Plan Name:")
-	if err != nil {
-		return err
+		workouts = append(workouts, workout)
 	}
 
-	planDescription, err := promptInput("\nEnter Plan Description:")
-	if err != nil {
-		return err
-	}
-
-	countExercises, err := promptInt("\nHow many exercises are in this plan?:>")
-	if err != nil {
-		return err
-	}
-
-	// Delegate the complex nested loop work to a dedicated function
-	exercises, err := collectExercisesInput(countExercises)
-	if err != nil {
-		return err
-	}
-
-	// Assemble the domain objects and commit to the vault state
-	workout := models.Workout{PlannedExercises: exercises}
-
-	planInDraft := models.Plan{
+	plan := models.Plan{
 		Id:          uuid.NewString(),
 		Name:        planName,
+		Status:      "active",
 		Description: planDescription,
-		Workouts:    []models.Workout{workout},
+		DatePlanned: time.Now(),
+		Workouts:    workouts,
 	}
 
-	vault.WorkoutPlans = append(vault.WorkoutPlans, planInDraft)
-	fmt.Printf("-- Plan successfully created with id: %s\n", planInDraft.Id)
+	vault.WorkoutPlans = append(vault.WorkoutPlans, plan)
+	PrintSuccess(fmt.Sprintf("Plan '%s' created with %d workouts! ID: %s", plan.Name, len(plan.Workouts), plan.Id))
 	return nil
 }
 
-// collectExercisesInput handles the loop to build out all exercises for the plan
-func collectExercisesInput(count int) ([]models.Exercise, error) {
-	exercises := make([]models.Exercise, 0, count)
+func collectWorkoutExercises(catalog *models.ExerciseCatalogData) (map[string]models.WorkoutExercise, error) {
+	result := make(map[string]models.WorkoutExercise)
 
-	for e := range count {
-		exerciseName, err := promptInput(fmt.Sprintf("Please Input the #%d exercise name:>", e+1))
-		if err != nil {
-			return nil, err
-		}
+	HandleShowCatalog(catalog)
 
-		setUnit, err := GetFreqUnit()
-		if err != nil {
-			return nil, err
-		}
-
-		maxSets := maxUnitValues[models.UnitType("sets")]
-		numOfWorkoutSets, err := promptInput(fmt.Sprintf("Input the number of Sets for exercise (%s) range and max (1-%d) :>", exerciseName, maxSets))
-		if err != nil {
-			return nil, err
-		}
-
-		countOfWorkOutSets, err := GetMeAValidMaxValue(numOfWorkoutSets, false, maxSets)
-		if err != nil {
-			return nil, err
-		}
-
-		workoutSets, err := collectSetsInput(countOfWorkOutSets, models.UnitType(setUnit))
-		if err != nil {
-			return nil, err
-		}
-
-		plannedExercise := models.Exercise{
-			Id:   uuid.NewString(),
-			Name: exerciseName,
-			Sets: workoutSets,
-		}
-		exercises = append(exercises, plannedExercise)
+	count, err := promptInt("\nHow many exercises to include in this workout?: ")
+	if err != nil {
+		return nil, err
 	}
 
-	return exercises, nil
+	for i := 0; i < count; i++ {
+		exId, err := promptInput(fmt.Sprintf("Enter Exercise #%d ID from catalog: ", i+1))
+		if err != nil {
+			return nil, err
+		}
+
+		// Find latest version of exercise
+		var selectedEx *models.Exercise
+		for idx := range catalog.Exercises {
+			if catalog.Exercises[idx].Id == exId {
+				if selectedEx == nil || catalog.Exercises[idx].Version > selectedEx.Version {
+					selectedEx = &catalog.Exercises[idx]
+				}
+			}
+		}
+
+		if selectedEx == nil {
+			fmt.Println("Warning: Exercise ID not found in catalog. Using raw ID.")
+			selectedEx = &models.Exercise{Id: exId, Version: 1, Name: "Unknown"}
+		}
+
+		setCount, err := promptInt(fmt.Sprintf("How many sets for %s?: ", selectedEx.Name))
+		if err != nil {
+			return nil, err
+		}
+
+		sets, err := collectSetsInput(setCount)
+		if err != nil {
+			return nil, err
+		}
+
+		workoutEx := models.WorkoutExercise{
+			ExerciseId:      selectedEx.Id,
+			ExerciseVersion: selectedEx.Version,
+			NameSnapshot:    selectedEx.Name,
+			Sets:            sets,
+		}
+
+		result[selectedEx.Id] = workoutEx
+	}
+
+	return result, nil
 }
 
-// collectSetsInput handles the inner loop to build out individual exercise sets
-func collectSetsInput(count int, unit models.UnitType) ([]models.ExerciseSet, error) {
-	workoutSets := make([]models.ExerciseSet, 0, count)
+func collectSetsInput(count int) ([]models.ExerciseSet, error) {
+	sets := make([]models.ExerciseSet, 0, count)
 
-	for s := range count {
-		fmt.Printf("About to enter details for set number:%d/%d\n", s+1, count)
-
-		plannedSet := models.ExerciseSet{
-			Id:            uuid.NewString(),
-			FrequencyUnit: unit,
-		}
-
-		if err := GetSetInput(&plannedSet); err != nil {
+	for s := 0; s < count; s++ {
+		fmt.Printf(" Set #%d/%d:\n", s+1, count)
+		setTypeInput, err := promptInput("   Set Type ('reps' for counting, 'timed' for time-based): ")
+		if err != nil {
 			return nil, err
 		}
 
-		workoutSets = append(workoutSets, plannedSet)
+		setType := models.SetTypeReps
+		if setTypeInput == "timed" {
+			setType = models.SetTypeTimed
+		}
+
+		set := models.ExerciseSet{
+			Id:      uuid.NewString(),
+			SetType: setType,
+		}
+
+		if setType == models.SetTypeReps {
+			reps, err := promptInt("   Enter Rep Count: ")
+			if err != nil {
+				return nil, err
+			}
+			set.RepCount = reps
+		} else {
+			duration, err := promptInt("   Enter Duration in Seconds: ")
+			if err != nil {
+				return nil, err
+			}
+			set.DurationSeconds = duration
+		}
+
+		weightStr, err := promptInput("   Enter Weight (lbs/kg): ")
+		if err != nil {
+			return nil, err
+		}
+		weight, _ := strconv.ParseFloat(weightStr, 64)
+		set.Weight = weight
+
+		effort, err := promptInt("   Enter Perceived Effort (1-10): ")
+		if err != nil {
+			return nil, err
+		}
+		set.PerceivedEffort = effort
+
+		sets = append(sets, set)
 	}
 
-	return workoutSets, nil
+	return sets, nil
+}
+
+// HandleMarkWorkoutExecuted toggles IsExecuted for a workout inside a plan
+func HandleMarkWorkoutExecuted(vault *models.GymRatVaultData) error {
+	fmt.Println("\n-- Mark Workout as Executed --")
+	if len(vault.WorkoutPlans) == 0 {
+		return errors.New("no workout plans available")
+	}
+
+	for pIdx, p := range vault.WorkoutPlans {
+		fmt.Printf("Plan #%d: %s (ID: %s)\n", pIdx+1, p.Name, p.Id)
+		for wIdx, w := range p.Workouts {
+			fmt.Printf("  Workout #%d: %s | Executed: %v | DatePlanned: %s\n",
+				wIdx+1, w.Name, w.IsExecuted, w.DatePlanned.Format(time.RFC3339))
+		}
+	}
+
+	planId, err := promptInput("\nEnter Plan ID: ")
+	if err != nil {
+		return err
+	}
+
+	wName, err := promptInput("Enter Workout Name to mark executed: ")
+	if err != nil {
+		return err
+	}
+
+	for pIdx := range vault.WorkoutPlans {
+		if vault.WorkoutPlans[pIdx].Id == planId {
+			for wIdx := range vault.WorkoutPlans[pIdx].Workouts {
+				if vault.WorkoutPlans[pIdx].Workouts[wIdx].Name == wName {
+					vault.WorkoutPlans[pIdx].Workouts[wIdx].IsExecuted = true
+					PrintSuccess(fmt.Sprintf("Workout '%s' marked as Executed!", wName))
+					return nil
+				}
+			}
+		}
+	}
+
+	return errors.New("matching Plan ID and Workout Name not found")
 }
 
 func promptInput(prompt string) (string, error) {
@@ -222,8 +374,8 @@ func promptInt(prompt string) (int, error) {
 
 	num, err := strconv.Atoi(val)
 	if err != nil {
-		fmt.Println("error: please type a valid whole number.")
-		return 0, err
+		return 0, fmt.Errorf("invalid integer: %w", err)
 	}
 	return num, nil
 }
+

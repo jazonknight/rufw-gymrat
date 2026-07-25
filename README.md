@@ -1,30 +1,141 @@
-# GymRat
+# GymRat 🏋️‍♂️
 
-A personalized, file-based fitness data management engine built in Go. GymRat is designed to give you absolute control over your training data without relying on third-party cloud apps, walled gardens, or heavy database overhead.
+**GymRat** is a high-performance, file-based fitness data engine, REST API server, interactive CLI, and web dashboard built in Go. It gives you absolute control over your fitness routines, exercise catalog, and workout tracking without third-party cloud apps, subscription locks, or database overhead.
 
-## What is GymRat?
+---
 
-GymRat is a highly efficient, lightweight backend utility and CLI tool tailored for managing structured fitness data. It handles the end-to-end pipeline of your personal physical training data by structuring, modifying, and persisting your custom routines.
+## 🌟 Key Features
 
-## Core Design
+* **Decoupled Exercise Catalog (`exercises.json`)**:
+  * **Version Control**: Every exercise item maintains an incremental `Version` number. Updating an exercise creates a new version while preserving historical exercise snapshots referenced by past workouts.
+  * **Soft Delete (`IsRemoved`)**: Deleting an exercise toggles an `IsRemoved` flag rather than hard-deleting records, maintaining complete auditability.
+* **Flexible Set Types**:
+  * **Counting Sets (`reps`)**: Track Rep Count, Weight, and Rate of Perceived Exertion (RPE 1-10).
+  * **Timed Sets (`timed`)**: Track Duration in Seconds, Weight, and RPE (1-10).
+* **Plans & Workouts Vault (`gymrat_plans.json`)**:
+  * Track scheduled workout dates (`DatePlanned`) and workout execution status (`IsExecuted`).
+  * Attach exercises from the catalog by `(ExerciseId, ExerciseVersion)`.
+* **Multi-Tenant Session Manager**:
+  * Isolated session workspaces generated under `data/sessions/<sessionId>/`.
+  * Support for single-file JSON bundle **Upload** and **Export**.
+* **Dual Interface**:
+  * **Interactive CLI**: Menu-driven terminal interface for local offline management.
+  * **REST API & Web UI**: HTTP server hosting REST endpoints and a modern, dark-mode web dashboard.
 
-The architecture is built around clean, cloud-native Go philosophies:
+---
 
-* **File-Based Persistence:** It avoids the complexity of an external database engine, relying instead on flat-file persistence (like highly structured JSON or YAML) that easily tracks in a Git repository.
-* **Strict Domain Modeling:** The core data layer leverages Go’s type system to handle complex, nested relationships:
-  * **Plans:** High-level training blocks or macrocycles.
-  * **Workouts:** Specific daily training sessions (such as lower body power or push days).
-  * **Exercises:** Individual movements tracking metrics like sets, reps, weight, RPE (Rate of Perceived Exertion), and rest intervals.
-* **Relational Lookups and Modularity:** The code is strictly modularized into independent packages. It uses relational lookup logic to tie individual exercise data back to global plans while maintaining clean, separate domain models.
-* **Local and Shared Packages:** The codebase is designed to easily share these models across multiple applications (such as a CLI tool, local scripts, or potential web frontends) using local Go workspaces or GitHub repositories.
+## 📁 Repository Structure
 
-## Why Build It This Way?
+```
+gymrat/
+├── cmd/                 # CLI interface handlers and terminal UI
+│   ├── cli.go           # Primary CLI menu loop
+│   ├── io_helpers.go    # Input reader utilities
+│   ├── ui.go            # Terminal banners and styling
+│   └── workout_handler.go # Interactive catalog & plan creation routines
+├── data/                # Default session workspaces storage directory
+├── models/              # Core domain models and configuration
+│   ├── config.go        # Set types, units, and validation constants
+│   ├── models.go        # Structs (Exercise, ExerciseSet, Workout, Plan, etc.)
+│   └── models_test.go   # Unit tests for models and versioning
+├── server/              # HTTP REST API server
+│   └── server.go        # Handlers for sessions, exercises, plans, upload, export
+├── storage/             # File storage and multi-tenant session manager
+│   ├── storage.go       # Save/Load functions for JSON catalog & vault
+│   └── storage_test.go  # Unit tests for persistence and import/export
+├── web/                 # Web Client Frontend
+│   ├── index.html       # HTML dashboard layout
+│   ├── styles.css       # Glassmorphism dark-mode CSS styling
+│   └── app.js           # REST API client & interactive UI controller
+├── main.go              # Main application entry point & CLI/Server flag parser
+└── storage.go           # Package wrapper delegating root storage calls
+```
 
-### Digital Minimalism and Data Sovereignty
-Commercial fitness apps are packed with bloat, ads, social feeds, and changing monetization models. GymRat provides maximum utility with zero digital noise. Because the data lives in flat files, you own it permanently, it remains entirely private, and it can be parsed or migrated effortlessly.
+---
 
-### Performance and Simplicity
-By choosing Go and file-based data structures over an enterprise relational database or a heavy ORM (Object-Relational Mapping), the tool achieves near-instantaneous execution times. It aligns perfectly with a systems-engineering approach: fast, predictable, and simple to maintain.
+## 🚀 Getting Started
 
-### Extensibility and the RupertFrameworks Connection
-Because the codebase is modular, it acts as a perfect practical sandbox for testing high-performance Go utilities, clean architecture paradigms, and shared module strategies. The design ensures that if you want to build a frontend interface or automate data syncing later, the foundational core is already built to scale.
+### Prerequisites
+* [Go 1.22+](https://golang.org/doc/install) installed on your system.
+
+### Build and Test
+Run the unit test suite across all packages:
+```bash
+go test -v ./...
+```
+
+Build the compiled executable binary:
+```bash
+go build -o gymrat main.go storage.go
+```
+
+---
+
+## 💻 Running GymRat
+
+### 1. Interactive Terminal CLI Mode (Default)
+Run GymRat directly in your terminal:
+```bash
+go run main.go storage.go
+```
+Or run the binary:
+```bash
+./gymrat
+```
+
+**CLI Menu Options:**
+1. **View Exercise Catalog**: Displays all active and soft-deleted exercise versions.
+2. **Add New Exercise**: Add a new exercise to the catalog (starts at Version 1).
+3. **Update Exercise**: Update an exercise, creating a new incremental Version.
+4. **Soft Delete Exercise**: Toggle the `IsRemoved` flag on an exercise.
+5. **View All Workout Plans**: List all plans and workouts.
+6. **Search for a Workout Plan**: Search plans by ID or Name.
+7. **Create New Workout Plan**: Interactively build plans with workouts, attach exercise catalog items, and configure Reps or Timed sets.
+8. **Mark Workout Executed**: Mark a planned workout as completed (`IsExecuted = true`).
+9. **Exit**: Save and close the CLI vault.
+
+---
+
+### 2. REST Server & Web UI Dashboard Mode
+Launch the HTTP server and serve the Web Client:
+```bash
+go run main.go storage.go -server -port 8080
+```
+Or run the binary with flags:
+```bash
+./gymrat -server -port 8080
+```
+
+Once running, open your web browser to:
+👉 **`http://localhost:8080`**
+
+#### Web UI Features:
+* **Session Lifecycle**: Automatically manages session IDs. Click "New Session" or switch sessions.
+* **Exercise Catalog**: Interactive card grid displaying version tags, category filters, soft-deleted status, and version bump modals.
+* **Workout Plans**: Visual builder for creating plans, adding workouts with Reps or Timed sets, and marking workouts executed.
+* **Import / Export**: Drag and drop exported `gymrat_vault.json` bundles to import data, or click "Export JSON" to download your current snapshot.
+
+---
+
+## 🌐 REST API Endpoint Reference
+
+All endpoints accept an optional header `X-Session-ID` (or query param `sessionId`). If omitted, a new session workspace is automatically generated.
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/session/new` | Creates a new session directory and returns `{ "sessionId": "..." }`. |
+| `GET` | `/api/exercises` | List all exercises in the catalog for the active session. |
+| `POST` | `/api/exercises` | Create a new exercise (starts at Version 1). |
+| `PUT` | `/api/exercises` | Update an existing exercise (bumps version to `Version + 1`). |
+| `DELETE` | `/api/exercises?id=<ID>` | Soft-delete an exercise by setting `IsRemoved = true`. |
+| `GET` | `/api/plans` | List all workout plans for the active session. |
+| `POST` | `/api/plans` | Create a new workout plan with workouts and set configurations. |
+| `PUT` | `/api/plans` | Update plan details or toggle a workout's `isExecuted` state. |
+| `POST` | `/api/vault/upload` | Import/upload a combined session JSON bundle. |
+| `GET` | `/api/vault/export` | Download the active session snapshot as a JSON file. |
+
+---
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
