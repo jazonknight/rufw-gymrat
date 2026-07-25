@@ -5,7 +5,6 @@ package storage
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -217,25 +216,34 @@ func (sm *SessionManager) SessionExists(sessionId string) bool {
 }
 
 // LoadSession reads and returns the exercise catalog and plans vault for the specified session ID from RAM.
+// If the session does not exist in memory, it auto-initializes it seeded with the default exercise catalog.
 func (sm *SessionManager) LoadSession(sessionId string) (models.ExerciseCatalogData, models.GymRatVaultData, error) {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
 
 	bundle, exists := sm.sessions[sessionId]
 	if !exists {
-		if sm.StorageMode == "disk" && sm.SessionExists(sessionId) {
+		if sm.StorageMode == "disk" {
 			dir := sm.GetSessionDir(sessionId)
 			cat, err := LoadExercises(dir, DefaultExercisesFilename)
-			if err != nil {
-				return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
+			if err == nil {
+				vault, _ := LoadVault(dir, DefaultPlansFilename)
+				b := &CombinedSessionBundle{SessionId: sessionId, Exercises: cat, Vault: vault}
+				sm.sessions[sessionId] = b
+				return cat, vault, nil
 			}
-			vault, err := LoadVault(dir, DefaultPlansFilename)
-			if err != nil {
-				return models.ExerciseCatalogData{}, models.GymRatVaultData{}, err
-			}
-			return cat, vault, nil
 		}
-		return models.ExerciseCatalogData{}, models.GymRatVaultData{}, errors.New("session not found")
+
+		// Auto-initialize session in memory seeded with default starter exercises
+		seedExercisesCopy := make([]models.Exercise, len(sm.DefaultCatalog.Exercises))
+		copy(seedExercisesCopy, sm.DefaultCatalog.Exercises)
+
+		bundle = &CombinedSessionBundle{
+			SessionId: sessionId,
+			Exercises: models.ExerciseCatalogData{Exercises: seedExercisesCopy},
+			Vault:     models.GymRatVaultData{WorkoutPlans: []models.Plan{}},
+		}
+		sm.sessions[sessionId] = bundle
 	}
 
 	return bundle.Exercises, bundle.Vault, nil
