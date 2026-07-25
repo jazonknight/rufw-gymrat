@@ -35,6 +35,7 @@
       <button class="tab-btn active" data-tab="catalog">📦 Exercise Library</button>
       <button class="tab-btn" data-tab="routines">🏋️‍♂️ Workout Routines</button>
       <button class="tab-btn" data-tab="plans">📋 Training Plans</button>
+      <button class="tab-btn" data-tab="history">📜 Workout History</button>
       <button class="tab-btn" data-tab="upload">📤 Import / Export Vault</button>
     </nav>
 
@@ -55,6 +56,14 @@
             </label>
             <button id="btn-add-exercise" class="btn btn-accent">+ New Exercise</button>
           </div>
+        </div>
+
+        <!-- Search & Category Filter Bar -->
+        <div class="filter-bar" style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <input type="text" id="search-exercise" placeholder="🔍 Search exercises by name or description..." style="flex: 2; padding: 10px 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main);">
+          <select id="filter-category" style="flex: 1; padding: 10px 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main);">
+            <option value="">All Categories</option>
+          </select>
         </div>
 
         <div id="catalog-grid" class="cards-grid">
@@ -92,7 +101,21 @@
         </div>
       </section>
 
-      <!-- TAB 3: IMPORT / EXPORT -->
+      <!-- TAB 4: WORKOUT HISTORY -->
+      <section id="tab-history" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2>Completed Workout History</h2>
+            <p>Chronological log of past completed training sessions, durations, and total volume lifted.</p>
+          </div>
+        </div>
+
+        <div id="history-container" class="plans-list">
+          <!-- History cards injected by app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 5: IMPORT / EXPORT -->
       <section id="tab-upload" class="tab-content">
         <div class="section-header">
           <div>
@@ -114,6 +137,29 @@
       </section>
 
     </main>
+
+  <!-- MODAL: LIVE WORKOUT LOGGER -->
+  <div id="modal-live-workout" class="modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="live-workout-name">Live Workout Session</h3>
+          <p class="subtitle" id="live-workout-timer">⏱️ Duration: 00:00:00</p>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div id="live-workout-body">
+        <!-- Live exercise set checklist injected by app.js -->
+      </div>
+      <div class="modal-actions" style="justify-content: space-between; align-items: center;">
+        <div id="live-rest-timer" style="color: var(--accent-amber); font-weight: 600; font-size: 0.9rem;"></div>
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel Workout</button>
+          <button type="button" id="btn-finish-live-workout" class="btn btn-accent">✓ Finish & Log Workout</button>
+        </div>
+      </div>
+    </div>
+  </div>
   </div>
 
   <!-- MODAL: ADD / UPDATE EXERCISE -->

@@ -5,11 +5,19 @@ let activeSessionId = localStorage.getItem('gymrat_session_id') || '';
 let exerciseCatalog = [];
 let workoutRoutines = [];
 let workoutPlans = [];
+let historyLogs = [];
+
+// Live Workout State
+let liveWorkoutSession = null;
+let liveTimerInterval = null;
+let liveTimerSeconds = 0;
+let restTimerInterval = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initModals();
   initUpload();
+  initFilters();
 
   if (!activeSessionId) {
     await createNewSession();
@@ -51,7 +59,8 @@ function initTabs() {
 
       tab.classList.add('active');
       const targetId = `tab-${tab.dataset.tab}`;
-      document.getElementById(targetId).classList.add('active');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) targetEl.classList.add('active');
     });
   });
 }
@@ -61,6 +70,7 @@ async function loadDashboardData() {
   await fetchExercises();
   await fetchWorkouts();
   await fetchPlans();
+  await fetchHistory();
 }
 
 async function fetchExercises() {
@@ -69,6 +79,7 @@ async function fetchExercises() {
       headers: { 'X-Session-ID': activeSessionId }
     });
     exerciseCatalog = await res.json();
+    updateCategoryDropdownOptions();
     renderCatalog();
   } catch (err) {
     console.error('Error fetching exercises:', err);
@@ -99,10 +110,41 @@ async function fetchPlans() {
   }
 }
 
-// TIER 1: Render Exercise Library
+async function fetchHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/history`, {
+      headers: { 'X-Session-ID': activeSessionId }
+    });
+    historyLogs = await res.json();
+    renderHistory();
+  } catch (err) {
+    console.error('Error fetching history:', err);
+  }
+}
+
+// Search & Category Filters
+function initFilters() {
+  document.getElementById('search-exercise').addEventListener('input', renderCatalog);
+  document.getElementById('filter-category').addEventListener('change', renderCatalog);
+}
+
+function updateCategoryDropdownOptions() {
+  const select = document.getElementById('filter-category');
+  const currentVal = select.value;
+  const categories = [...new Set(exerciseCatalog.map(e => e.category).filter(Boolean))];
+
+  select.innerHTML = '<option value="">All Categories</option>' +
+    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  select.value = currentVal;
+}
+
+// TIER 1: Render Exercise Library with Search & Category Filtering
 function renderCatalog() {
   const grid = document.getElementById('catalog-grid');
   const showRemoved = document.getElementById('toggle-removed').checked;
+  const searchQuery = (document.getElementById('search-exercise').value || '').toLowerCase();
+  const selectedCategory = document.getElementById('filter-category').value;
+
   grid.innerHTML = '';
 
   if (!exerciseCatalog || exerciseCatalog.length === 0) {
@@ -110,7 +152,18 @@ function renderCatalog() {
     return;
   }
 
-  const filtered = exerciseCatalog.filter(ex => showRemoved || !ex.isRemoved);
+  const filtered = exerciseCatalog.filter(ex => {
+    const matchesRemoved = showRemoved || !ex.isRemoved;
+    const matchesSearch = (ex.name || '').toLowerCase().includes(searchQuery) ||
+                          (ex.description || '').toLowerCase().includes(searchQuery);
+    const matchesCategory = !selectedCategory || ex.category === selectedCategory;
+    return matchesRemoved && matchesSearch && matchesCategory;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<p class="subtitle">No exercises match your search or filter criteria.</p>';
+    return;
+  }
 
   filtered.forEach(ex => {
     const card = document.createElement('div');
@@ -149,10 +202,10 @@ function renderRoutines() {
     let exSummary = '';
     if (routine.exercises) {
       Object.values(routine.exercises).forEach(we => {
-        let setsSummary = (we.sets || []).map(s => {
-          return s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight}lbs` : `${s.repCount} reps @ ${s.weight}lbs`;
+        let setsSummary = (we.sets || []).map((s, i) => {
+          return `Set ${i+1}: ${s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight}lbs` : `${s.repCount} reps @ ${s.weight}lbs`}`;
         }).join(' | ');
-        exSummary += `<div style="font-size: 0.85rem; margin-top: 4px;">• <strong>${escapeHtml(we.nameSnapshot || 'Exercise')}:</strong> ${setsSummary}</div>`;
+        exSummary += `<div style="font-size: 0.85rem; margin-top: 4px;">• <strong>${escapeHtml(we.nameSnapshot || 'Exercise')} (${(we.sets || []).length} sets):</strong> ${setsSummary}</div>`;
       });
     }
 
@@ -171,7 +224,7 @@ function renderRoutines() {
   });
 }
 
-// TIER 3: Render Training Plans
+// TIER 3: Render Training Plans with Live Logger Trigger
 function renderPlans() {
   const container = document.getElementById('plans-container');
   container.innerHTML = '';
@@ -187,15 +240,14 @@ function renderPlans() {
 
     let workoutsHtml = '';
     if (plan.workouts && plan.workouts.length > 0) {
-      // Sort workouts chronologically by DatePlanned
       const sortedWorkouts = [...plan.workouts].sort((a, b) => new Date(a.datePlanned) - new Date(b.datePlanned));
 
       workoutsHtml = sortedWorkouts.map(w => {
         let exHtml = '';
         if (w.exercises) {
           Object.values(w.exercises).forEach(we => {
-            let setsStr = we.sets ? we.sets.map(s => {
-              return s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight}lbs` : `${s.repCount} reps @ ${s.weight}lbs`;
+            let setsStr = we.sets ? we.sets.map((s, i) => {
+              return `Set ${i+1}: ${s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight}lbs` : `${s.repCount} reps @ ${s.weight}lbs`}`;
             }).join(' | ') : '';
 
             exHtml += `<div><strong>${escapeHtml(we.nameSnapshot || 'Exercise')}:</strong> ${setsStr}</div>`;
@@ -213,9 +265,12 @@ function renderPlans() {
                   📅 Planned Date: ${dateStr}
                 </div>
               </div>
-              <button class="btn btn-sm ${w.isExecuted ? 'btn-secondary' : 'btn-accent'}" onclick="toggleWorkoutExecuted('${plan.id}', '${w.id}', ${!w.isExecuted})">
-                ${w.isExecuted ? '✓ Executed' : 'Mark Executed'}
-              </button>
+              <div style="display: flex; gap: 8px;">
+                ${!w.isExecuted ? `<button class="btn btn-accent btn-sm" onclick="startLiveWorkout('${plan.id}', '${w.id}')">▶ Start Workout</button>` : ''}
+                <button class="btn btn-sm ${w.isExecuted ? 'btn-secondary' : 'btn-secondary'}" onclick="toggleWorkoutExecuted('${plan.id}', '${w.id}', ${!w.isExecuted})">
+                  ${w.isExecuted ? '✓ Executed' : 'Mark Executed'}
+                </button>
+              </div>
             </div>
             <p class="ex-desc">${escapeHtml(w.description || '')}</p>
             ${exHtml}
@@ -238,6 +293,220 @@ function renderPlans() {
     `;
     container.appendChild(card);
   });
+}
+
+// WORKOUT HISTORY LOG TAB
+function renderHistory() {
+  const container = document.getElementById('history-container');
+  container.innerHTML = '';
+
+  if (!historyLogs || historyLogs.length === 0) {
+    container.innerHTML = '<p class="subtitle">No completed workout history logs recorded yet. Complete a workout to start building history!</p>';
+    return;
+  }
+
+  const sortedLogs = [...historyLogs].sort((a, b) => new Date(b.dateCompleted) - new Date(a.dateCompleted));
+
+  sortedLogs.forEach(log => {
+    const card = document.createElement('div');
+    card.className = 'plan-card';
+
+    const durationMin = Math.round((log.durationSeconds || 0) / 60);
+    const dateStr = log.dateCompleted ? new Date(log.dateCompleted).toLocaleString() : 'Recent';
+
+    let exDetails = '';
+    if (log.workoutSnapshot && log.workoutSnapshot.exercises) {
+      Object.values(log.workoutSnapshot.exercises).forEach(we => {
+        let setPills = (we.sets || []).map((s, i) => {
+          return `Set ${i+1}: ${s.setType === 'timed' ? `${s.durationSeconds}s @ ${s.weight} lbs` : `${s.repCount} reps @ ${s.weight} lbs`}`;
+        }).join(' | ');
+        exDetails += `<div><strong>${escapeHtml(we.nameSnapshot || 'Exercise')}:</strong> ${setPills}</div>`;
+      });
+    }
+
+    card.innerHTML = `
+      <div class="plan-header">
+        <div>
+          <h3>🏋️‍♂️ ${escapeHtml(log.workoutName || 'Completed Workout')}</h3>
+          <p class="subtitle">Completed: ${dateStr} • Duration: ${durationMin} mins</p>
+        </div>
+        <span class="badge" style="background: var(--gradient-accent); color: #000;">${(log.totalVolumeLbs || 0).toLocaleString()} lbs Volume</span>
+      </div>
+      <div style="font-size: 0.9rem; line-height: 1.6;">
+        ${exDetails}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// LIVE WORKOUT SESSION LOGGER
+function startLiveWorkout(planId, workoutId) {
+  const plan = workoutPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const workout = (plan.workouts || []).find(w => w.id === workoutId);
+  if (!workout) return;
+
+  // Clone workout object for live logging
+  liveWorkoutSession = {
+    planId: plan.id,
+    workoutId: workout.id,
+    workoutName: workout.name,
+    exercises: JSON.parse(JSON.stringify(workout.exercises || {}))
+  };
+
+  document.getElementById('live-workout-name').textContent = `Live: ${workout.name}`;
+  document.getElementById('live-rest-timer').textContent = '';
+  
+  // Reset and start live timer
+  liveTimerSeconds = 0;
+  clearInterval(liveTimerInterval);
+  liveTimerInterval = setInterval(() => {
+    liveTimerSeconds++;
+    const hrs = String(Math.floor(liveTimerSeconds / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((liveTimerSeconds % 3600) / 60)).padStart(2, '0');
+    const secs = String(liveTimerSeconds % 60).padStart(2, '0');
+    document.getElementById('live-workout-timer').textContent = `⏱️ Session Duration: ${hrs}:${mins}:${secs}`;
+  }, 1000);
+
+  renderLiveWorkoutBody();
+  document.getElementById('modal-live-workout').classList.add('active');
+}
+
+function renderLiveWorkoutBody() {
+  const body = document.getElementById('live-workout-body');
+  body.innerHTML = '';
+
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises) return;
+
+  Object.values(liveWorkoutSession.exercises).forEach(we => {
+    const exDiv = document.createElement('div');
+    exDiv.style.cssText = 'background: rgba(0,0,0,0.3); padding: 14px; margin-bottom: 14px; border-radius: 10px; border: 1px solid var(--border-color);';
+
+    let setsHtml = (we.sets || []).map((s, idx) => `
+      <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px; font-size: 0.88rem;">
+        <span style="width: 50px; font-weight: 600;">Set ${idx + 1}:</span>
+        <label>Weight (lbs):</label>
+        <input type="number" class="live-weight" data-ex="${we.exerciseId}" data-set="${idx}" value="${s.weight || 45}" style="width: 80px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+        <label>${s.setType === 'timed' ? 'Seconds:' : 'Reps:'}</label>
+        <input type="number" class="live-reps" data-ex="${we.exerciseId}" data-set="${idx}" value="${s.setType === 'timed' ? (s.durationSeconds || 30) : (s.repCount || 10)}" style="width: 80px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+        <button class="btn btn-secondary btn-sm" onclick="triggerRestTimer(30, this)">✓ Set Done</button>
+      </div>
+    `).join('');
+
+    exDiv.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <h4 style="color: var(--accent-emerald); font-size: 1.1rem;">${escapeHtml(we.nameSnapshot || 'Exercise')}</h4>
+        <button class="btn btn-secondary btn-sm" onclick="addExtraLiveSet('${we.exerciseId}')">+ Add Set</button>
+      </div>
+      ${setsHtml}
+    `;
+    body.appendChild(exDiv);
+  });
+}
+
+function addExtraLiveSet(exerciseId) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+
+  const currentSets = liveWorkoutSession.exercises[exerciseId].sets || [];
+  const lastSet = currentSets[currentSets.length - 1] || { setType: 'reps', repCount: 10, weight: 45 };
+
+  currentSets.push({
+    id: crypto.randomUUID(),
+    setType: lastSet.setType,
+    repCount: lastSet.repCount,
+    durationSeconds: lastSet.durationSeconds,
+    weight: lastSet.weight,
+    perceivedEffort: 7
+  });
+
+  liveWorkoutSession.exercises[exerciseId].sets = currentSets;
+  renderLiveWorkoutBody();
+}
+
+function triggerRestTimer(seconds = 30, btnEl) {
+  if (btnEl) {
+    btnEl.style.background = 'var(--accent-emerald)';
+    btnEl.style.color = '#000';
+    btnEl.textContent = '✓ Completed';
+  }
+
+  let restRemaining = seconds;
+  clearInterval(restTimerInterval);
+  const timerEl = document.getElementById('live-rest-timer');
+
+  restTimerInterval = setInterval(() => {
+    restRemaining--;
+    if (restRemaining <= 0) {
+      clearInterval(restTimerInterval);
+      timerEl.textContent = '⚡ Rest Finished! Ready for next set.';
+    } else {
+      timerEl.textContent = `⏱️ Rest Timer: ${restRemaining}s remaining`;
+    }
+  }, 1000);
+}
+
+// Finish & Log Live Workout Session
+async function finishLiveWorkout() {
+  if (!liveWorkoutSession) return;
+
+  clearInterval(liveTimerInterval);
+  clearInterval(restTimerInterval);
+
+  let totalVolumeLbs = 0;
+
+  const weightInputs = document.querySelectorAll('.live-weight');
+  const repsInputs = document.querySelectorAll('.live-reps');
+
+  weightInputs.forEach((wInp, idx) => {
+    const weight = parseFloat(wInp.value) || 0;
+    const reps = parseFloat(repsInputs[idx] ? repsInputs[idx].value : 0) || 0;
+    const exId = wInp.dataset.ex;
+    const setIdx = parseInt(wInp.dataset.set);
+
+    if (liveWorkoutSession.exercises[exId] && liveWorkoutSession.exercises[exId].sets[setIdx]) {
+      const setObj = liveWorkoutSession.exercises[exId].sets[setIdx];
+      setObj.weight = weight;
+      if (setObj.setType === 'timed') {
+        setObj.durationSeconds = reps;
+      } else {
+        setObj.repCount = reps;
+        totalVolumeLbs += (weight * reps);
+      }
+    }
+  });
+
+  const historyLog = {
+    id: crypto.randomUUID(),
+    workoutId: liveWorkoutSession.workoutId,
+    planId: liveWorkoutSession.planId,
+    workoutName: liveWorkoutSession.workoutName,
+    dateCompleted: new Date().toISOString(),
+    durationSeconds: liveTimerSeconds,
+    totalVolumeLbs: totalVolumeLbs,
+    workoutSnapshot: {
+      id: liveWorkoutSession.workoutId,
+      name: liveWorkoutSession.workoutName,
+      datePlanned: new Date().toISOString(),
+      isExecuted: true,
+      exercises: liveWorkoutSession.exercises
+    }
+  };
+
+  await fetch(`${API_BASE}/history`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-ID': activeSessionId
+    },
+    body: JSON.stringify(historyLog)
+  });
+
+  await toggleWorkoutExecuted(liveWorkoutSession.planId, liveWorkoutSession.workoutId, true);
+
+  document.getElementById('modal-live-workout').classList.remove('active');
+  liveWorkoutSession = null;
+  await loadDashboardData();
 }
 
 // Exercise Actions
@@ -286,6 +555,7 @@ function initModals() {
   const modalEx = document.getElementById('modal-exercise');
   const modalRoutine = document.getElementById('modal-routine');
   const modalPlan = document.getElementById('modal-plan');
+  const modalLive = document.getElementById('modal-live-workout');
 
   // Open Exercise Modal
   document.getElementById('btn-add-exercise').addEventListener('click', () => {
@@ -307,9 +577,11 @@ function initModals() {
   document.getElementById('btn-add-plan').addEventListener('click', () => {
     document.getElementById('form-plan').reset();
     document.getElementById('plan-schedule-builder').innerHTML = '';
-    addPlanScheduleStep(); // Add 1st scheduled workout row by default
+    addPlanScheduleStep();
     modalPlan.classList.add('active');
   });
+
+  document.getElementById('btn-finish-live-workout').addEventListener('click', finishLiveWorkout);
 
   // Close buttons
   document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
@@ -317,6 +589,9 @@ function initModals() {
       modalEx.classList.remove('active');
       modalRoutine.classList.remove('active');
       modalPlan.classList.remove('active');
+      modalLive.classList.remove('active');
+      clearInterval(liveTimerInterval);
+      clearInterval(restTimerInterval);
     });
   });
 
@@ -345,7 +620,7 @@ function initModals() {
   document.getElementById('btn-add-routine-ex-step').addEventListener('click', addRoutineExerciseStep);
   document.getElementById('btn-add-plan-schedule-step').addEventListener('click', addPlanScheduleStep);
 
-  // Routine Form Submit (Tier 2)
+  // Routine Form Submit (Multi-Set Builder)
   document.getElementById('form-routine').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('routine-name').value;
@@ -356,28 +631,33 @@ function initModals() {
 
     exEls.forEach(el => {
       const exSelect = el.querySelector('.r-ex-select');
-      const setType = el.querySelector('.r-set-type').value;
-      const valCount = parseInt(el.querySelector('.r-val').value) || 10;
-      const weight = parseFloat(el.querySelector('.r-weight').value) || 0;
-
       const selectedExId = exSelect.value;
       const selectedEx = exerciseCatalog.find(e => e.id === selectedExId) || { name: 'Custom Exercise', version: 1 };
 
-      const setObj = {
-        id: crypto.randomUUID(),
-        setType: setType,
-        repCount: setType === 'reps' ? valCount : 0,
-        durationSeconds: setType === 'timed' ? valCount : 0,
-        weight: weight,
-        perceivedEffort: 7
-      };
+      const setRows = el.querySelectorAll('.routine-set-row');
+      const setsArr = [];
+
+      setRows.forEach(sRow => {
+        const setType = sRow.querySelector('.r-set-type').value;
+        const valCount = parseInt(sRow.querySelector('.r-val').value) || 10;
+        const weight = parseFloat(sRow.querySelector('.r-weight').value) || 0;
+
+        setsArr.push({
+          id: crypto.randomUUID(),
+          setType: setType,
+          repCount: setType === 'reps' ? valCount : 0,
+          durationSeconds: setType === 'timed' ? valCount : 0,
+          weight: weight,
+          perceivedEffort: 7
+        });
+      });
 
       if (selectedExId) {
         exercisesMap[selectedExId] = {
           exerciseId: selectedExId,
           exerciseVersion: selectedEx.version,
           nameSnapshot: selectedEx.name,
-          sets: [setObj]
+          sets: setsArr
         };
       }
     });
@@ -404,7 +684,7 @@ function initModals() {
     await fetchWorkouts();
   });
 
-  // Plan Form Submit (Tier 3 with Date Selection)
+  // Plan Form Submit (Tier 3)
   document.getElementById('form-plan').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('plan-name').value;
@@ -470,36 +750,58 @@ function openUpdateExerciseModal(id) {
 function addRoutineExerciseStep() {
   const container = document.getElementById('routine-exercises-builder');
   const index = container.children.length + 1;
+  const exIdIndex = `ex_builder_${Date.now()}_${index}`;
 
   let optionsHtml = exerciseCatalog.map(ex => `<option value="${ex.id}">${escapeHtml(ex.name)} (v${ex.version})</option>`).join('');
 
   const div = document.createElement('div');
   div.className = 'routine-ex-builder-item';
-  div.style.cssText = 'background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid var(--border-color)';
+  div.style.cssText = 'background: rgba(0,0,0,0.3); padding: 14px; margin-bottom: 14px; border-radius: 8px; border: 1px solid var(--border-color)';
   div.innerHTML = `
     <div class="form-group">
       <label>Select Exercise #${index} from Library</label>
       <select class="r-ex-select">${optionsHtml || '<option value="">No Library Exercises Available</option>'}</select>
     </div>
-    <div style="display: flex; gap: 10px;">
-      <div class="form-group" style="flex: 1;">
-        <label>Set Type</label>
-        <select class="r-set-type">
-          <option value="reps">Counting Sets (Reps)</option>
-          <option value="timed">Timed Sets (Seconds)</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label>Reps or Duration (sec)</label>
-        <input type="number" class="r-val" value="10">
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label>Weight (lbs)</label>
-        <input type="number" class="r-weight" value="45">
-      </div>
+    
+    <div class="r-sets-container" id="sets_container_${exIdIndex}">
+      <!-- Set rows dynamically added -->
     </div>
+
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addSetRowToRoutine('sets_container_${exIdIndex}')">+ Add Set</button>
   `;
   container.appendChild(div);
+
+  // Add 3 default set rows for convenient workout routine building
+  addSetRowToRoutine(`sets_container_${exIdIndex}`);
+  addSetRowToRoutine(`sets_container_${exIdIndex}`);
+  addSetRowToRoutine(`sets_container_${exIdIndex}`);
+}
+
+function addSetRowToRoutine(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const setIndex = container.children.length + 1;
+
+  const setRow = document.createElement('div');
+  setRow.className = 'routine-set-row';
+  setRow.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 8px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;';
+  setRow.innerHTML = `
+    <span style="font-size: 0.85rem; font-weight: 600; width: 45px;">Set ${setIndex}</span>
+    <div style="flex: 1;">
+      <select class="r-set-type" style="padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+        <option value="reps">Counting (Reps)</option>
+        <option value="timed">Timed (Seconds)</option>
+      </select>
+    </div>
+    <div style="flex: 1;">
+      <input type="number" class="r-val" value="10" placeholder="Reps/Sec" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+    </div>
+    <div style="flex: 1;">
+      <input type="number" class="r-weight" value="45" placeholder="Weight (lbs)" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+    </div>
+  `;
+  container.appendChild(setRow);
 }
 
 function addPlanScheduleStep() {

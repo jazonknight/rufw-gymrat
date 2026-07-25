@@ -62,6 +62,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/exercises", wrap(s.handleExercises))
 	mux.HandleFunc("/api/workouts", wrap(s.handleWorkouts))
 	mux.HandleFunc("/api/plans", wrap(s.handlePlans))
+	mux.HandleFunc("/api/history", wrap(s.handleHistory))
 	mux.HandleFunc("/api/vault/upload", wrap(s.handleUpload))
 	mux.HandleFunc("/api/vault/export", wrap(s.handleExport))
 
@@ -521,6 +522,56 @@ func (s *Server) handleWorkouts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]string{"message": "Workout template deleted successfully"})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	sessionId, err := s.getSessionId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	catalog, vault, err := s.SessionMgr.LoadSession(sessionId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Session-ID", sessionId)
+
+	switch r.Method {
+	case http.MethodGet:
+		if vault.Workouts == nil {
+			vault.Workouts = []models.HistoricWorkouts{}
+		}
+		json.NewEncoder(w).Encode(vault.Workouts)
+
+	case http.MethodPost:
+		var logEntry models.HistoricWorkouts
+		if err := json.NewDecoder(r.Body).Decode(&logEntry); err != nil {
+			http.Error(w, "Invalid JSON input", http.StatusBadRequest)
+			return
+		}
+
+		if logEntry.Id == "" {
+			logEntry.Id = uuid.NewString()
+		}
+		if logEntry.DateCompleted.IsZero() {
+			logEntry.DateCompleted = time.Now()
+		}
+
+		vault.Workouts = append(vault.Workouts, logEntry)
+		if err := s.SessionMgr.SaveSession(sessionId, catalog, vault); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(logEntry)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

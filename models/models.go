@@ -92,11 +92,16 @@ type GymRatVaultData struct {
 	Workouts         []HistoricWorkouts `json:"workouts,omitempty"`
 }
 
-// HistoricWorkouts tracks historical completed workout plan logs.
+// HistoricWorkouts tracks historical completed workout logs.
 type HistoricWorkouts struct {
-	Id            string    `json:"id"`
-	DateWorkedOut time.Time `json:"dateWorkedOut"`
-	WorkoutPlan   Plan      `json:"workoutPlan"`
+	Id              string    `json:"id"`
+	WorkoutId       string    `json:"workoutId"`
+	PlanId          string    `json:"planId,omitempty"`
+	WorkoutName     string    `json:"workoutName"`
+	DateCompleted   time.Time `json:"dateCompleted"`
+	DurationSeconds int       `json:"durationSeconds"` // Total workout duration in seconds
+	TotalVolumeLbs  float64   `json:"totalVolumeLbs"`  // Total volume lifted (weight * reps)
+	WorkoutSnapshot Workout   `json:"workoutSnapshot"` // Completed workout state with actual logged sets
 }
 
 
