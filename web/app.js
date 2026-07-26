@@ -431,11 +431,22 @@ function startLiveWorkout(planId, workoutId) {
   if (!workout) return;
 
   // Clone workout object for live logging
+  const clonedExercises = JSON.parse(JSON.stringify(workout.exercises || {}));
+  
+  // Ensure every set object has isCompleted state tracking
+  Object.values(clonedExercises).forEach(we => {
+    (we.sets || []).forEach(s => {
+      if (typeof s.isCompleted === 'undefined') {
+        s.isCompleted = false;
+      }
+    });
+  });
+
   liveWorkoutSession = {
     planId: plan.id,
     workoutId: workout.id,
     workoutName: workout.name,
-    exercises: JSON.parse(JSON.stringify(workout.exercises || {}))
+    exercises: clonedExercises
   };
 
   document.getElementById('live-workout-name').textContent = `Live: ${workout.name}`;
@@ -466,16 +477,29 @@ function renderLiveWorkoutBody() {
     const exDiv = document.createElement('div');
     exDiv.style.cssText = 'background: rgba(0,0,0,0.3); padding: 14px; margin-bottom: 14px; border-radius: 10px; border: 1px solid var(--border-color);';
 
-    let setsHtml = (we.sets || []).map((s, idx) => `
-      <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px; font-size: 0.88rem;">
-        <span style="width: 50px; font-weight: 600;">Set ${idx + 1}:</span>
-        <label>Weight (lbs):</label>
-        <input type="number" class="live-weight" data-ex="${we.exerciseId}" data-set="${idx}" value="${s.weight || 45}" style="width: 80px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
-        <label>${s.setType === 'timed' ? 'Seconds:' : 'Reps:'}</label>
-        <input type="number" class="live-reps" data-ex="${we.exerciseId}" data-set="${idx}" value="${s.setType === 'timed' ? (s.durationSeconds || 30) : (s.repCount || 10)}" style="width: 80px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
-        <button class="btn btn-secondary btn-sm" onclick="triggerRestTimer(30, this)">✓ Set Done</button>
-      </div>
-    `).join('');
+    let setsHtml = (we.sets || []).map((s, idx) => {
+      const isDone = s.isCompleted === true;
+      const btnStyle = isDone ? 'background: var(--accent-emerald); color: #000;' : '';
+      const btnText = isDone ? '✓ Completed' : '✓ Set Done';
+
+      return `
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.88rem; flex-wrap: wrap;">
+          <span style="width: 48px; font-weight: 600;">Set ${idx + 1}:</span>
+          <label>Weight (lbs):</label>
+          <input type="number" class="live-weight" value="${s.weight || 0}" 
+                 oninput="updateLiveSetWeight('${we.exerciseId}', ${idx}, this.value)" 
+                 style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          
+          <label>${s.setType === 'timed' ? 'Sec:' : 'Reps:'}</label>
+          <input type="number" class="live-reps" value="${s.setType === 'timed' ? (s.durationSeconds || 30) : (s.repCount || 10)}" 
+                 oninput="updateLiveSetReps('${we.exerciseId}', ${idx}, this.value)" 
+                 style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          
+          <button type="button" class="btn btn-secondary btn-sm" style="${btnStyle}" onclick="toggleLiveSetCompleted('${we.exerciseId}', ${idx})">${btnText}</button>
+          <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; color: var(--accent-rose);" onclick="removeLiveSet('${we.exerciseId}', ${idx})" title="Remove Set">🗑️</button>
+        </div>
+      `;
+    }).join('');
 
     exDiv.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -486,6 +510,47 @@ function renderLiveWorkoutBody() {
     `;
     body.appendChild(exDiv);
   });
+}
+
+function updateLiveSetWeight(exerciseId, setIdx, value) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+  const sets = liveWorkoutSession.exercises[exerciseId].sets || [];
+  if (sets[setIdx]) {
+    sets[setIdx].weight = parseFloat(value) || 0;
+  }
+}
+
+function updateLiveSetReps(exerciseId, setIdx, value) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+  const sets = liveWorkoutSession.exercises[exerciseId].sets || [];
+  if (sets[setIdx]) {
+    const val = parseFloat(value) || 0;
+    if (sets[setIdx].setType === 'timed') {
+      sets[setIdx].durationSeconds = val;
+    } else {
+      sets[setIdx].repCount = val;
+    }
+  }
+}
+
+function toggleLiveSetCompleted(exerciseId, setIdx) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+  const sets = liveWorkoutSession.exercises[exerciseId].sets || [];
+  if (!sets[setIdx]) return;
+
+  sets[setIdx].isCompleted = !sets[setIdx].isCompleted;
+  if (sets[setIdx].isCompleted) {
+    triggerRestTimer(30);
+  }
+  renderLiveWorkoutBody();
+}
+
+function removeLiveSet(exerciseId, setIdx) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+  const sets = liveWorkoutSession.exercises[exerciseId].sets || [];
+  sets.splice(setIdx, 1);
+  liveWorkoutSession.exercises[exerciseId].sets = sets;
+  renderLiveWorkoutBody();
 }
 
 function addExtraLiveSet(exerciseId) {
@@ -500,20 +565,15 @@ function addExtraLiveSet(exerciseId) {
     repCount: lastSet.repCount,
     durationSeconds: lastSet.durationSeconds,
     weight: lastSet.weight,
-    perceivedEffort: 7
+    perceivedEffort: 7,
+    isCompleted: false
   });
 
   liveWorkoutSession.exercises[exerciseId].sets = currentSets;
   renderLiveWorkoutBody();
 }
 
-function triggerRestTimer(seconds = 30, btnEl) {
-  if (btnEl) {
-    btnEl.style.background = 'var(--accent-emerald)';
-    btnEl.style.color = '#000';
-    btnEl.textContent = '✓ Completed';
-  }
-
+function triggerRestTimer(seconds = 30) {
   let restRemaining = seconds;
   clearInterval(restTimerInterval);
   const timerEl = document.getElementById('live-rest-timer');
@@ -538,25 +598,15 @@ async function finishLiveWorkout() {
 
   let totalVolumeLbs = 0;
 
-  const weightInputs = document.querySelectorAll('.live-weight');
-  const repsInputs = document.querySelectorAll('.live-reps');
-
-  weightInputs.forEach((wInp, idx) => {
-    const weight = parseFloat(wInp.value) || 0;
-    const reps = parseFloat(repsInputs[idx] ? repsInputs[idx].value : 0) || 0;
-    const exId = wInp.dataset.ex;
-    const setIdx = parseInt(wInp.dataset.set);
-
-    if (liveWorkoutSession.exercises[exId] && liveWorkoutSession.exercises[exId].sets[setIdx]) {
-      const setObj = liveWorkoutSession.exercises[exId].sets[setIdx];
-      setObj.weight = weight;
-      if (setObj.setType === 'timed') {
-        setObj.durationSeconds = reps;
-      } else {
-        setObj.repCount = reps;
+  // Calculate volume from completed / logged sets
+  Object.values(liveWorkoutSession.exercises).forEach(we => {
+    (we.sets || []).forEach(s => {
+      const weight = s.weight || 0;
+      if (s.setType !== 'timed') {
+        const reps = s.repCount || 0;
         totalVolumeLbs += (weight * reps);
       }
-    }
+    });
   });
 
   const historyLog = {
