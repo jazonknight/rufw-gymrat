@@ -504,12 +504,21 @@ function renderLiveWorkoutBody() {
     exDiv.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
         <h4 style="color: var(--accent-emerald); font-size: 1.1rem;">${escapeHtml(we.nameSnapshot || 'Exercise')}</h4>
-        <button class="btn btn-secondary btn-sm" onclick="addExtraLiveSet('${we.exerciseId}')">+ Add Set</button>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addExtraLiveSet('${we.exerciseId}')">+ Add Set</button>
+          <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; color: var(--accent-rose);" onclick="removeLiveExercise('${we.exerciseId}')" title="Remove Exercise">🗑️ Remove Exercise</button>
+        </div>
       </div>
       ${setsHtml}
     `;
     body.appendChild(exDiv);
   });
+}
+
+function removeLiveExercise(exerciseId) {
+  if (!liveWorkoutSession || !liveWorkoutSession.exercises[exerciseId]) return;
+  delete liveWorkoutSession.exercises[exerciseId];
+  renderLiveWorkoutBody();
 }
 
 function updateLiveSetWeight(exerciseId, setIdx, value) {
