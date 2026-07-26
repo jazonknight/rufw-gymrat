@@ -44,4 +44,3 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/rufw-gymrat:latest
-            ${{ secrets.DOCKER_HUB_USERNAME }}/rufw-gymrat:${{ github.sha }}

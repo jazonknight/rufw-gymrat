@@ -549,3 +549,98 @@ body {
   accent-color: var(--accent-emerald);
   cursor: pointer;
 }
+
+/* Mobile Responsiveness & Gym UX Enhancements */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 8px;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .session-bar {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .nav-tabs {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+  }
+
+  .content-area {
+    padding: 16px 8px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .actions-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .modal-content {
+    width: 96%;
+    padding: 18px;
+    max-height: 92vh;
+  }
+
+  /* Gym-Friendly Touch Targets for Live Logger */
+  .live-weight, .live-reps, .form-group input, .form-group select {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+    min-height: 42px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    min-height: 44px; /* Fat-thumb friendly touch target height */
+  }
+
+  .card-actions {
+    flex-direction: column;
+  }
+
+  .card-actions button {
+    width: 100%;
+  }
+
+  .plan-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

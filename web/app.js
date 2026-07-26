@@ -1,6 +1,7 @@
 // GymRat Web Dashboard JavaScript Controller
 
 const API_BASE = '/api';
+const APP_VERSION = 'v2.0.5';
 let activeSessionId = localStorage.getItem('gymrat_session_id') || '';
 let exerciseCatalog = [];
 let workoutRoutines = [];
@@ -14,6 +15,9 @@ let liveTimerSeconds = 0;
 let restTimerInterval = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const versionBadge = document.getElementById('app-version-badge');
+  if (versionBadge) versionBadge.textContent = APP_VERSION;
+
   initTabs();
   initModals();
   initUpload();
