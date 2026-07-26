@@ -90,3 +90,13 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=gymrat_vault_%s.json", sessionId))
 	w.Write(data)
 }
+
+// handleOpenAPI serves the OpenAPI 3.0 YAML specification file for API documentation & SDK generation.
+func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
+	http.ServeFile(w, r, "docs/openapi.yaml")
+}

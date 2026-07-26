@@ -1,0 +1,443 @@
+openapi: 3.0.3
+info:
+  title: GymRat REST API
+  description: >
+    High-performance, privacy-first REST API engine for managing versioned exercise catalogs,
+    workout routine templates, scheduled training plans, and live completed workout history.
+  version: 2.0.5
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local REST API Server
+  - url: https://gymrat.rufw.io/api
+    description: Cloudflare Tunnel Production Proxy
+
+paths:
+  /session/new:
+    post:
+      summary: Initialize New Session
+      description: Generates a fresh unique workspace session ID and seeds default exercise and workout routine starter catalogs into memory.
+      responses:
+        '200':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                    example: "8b757e0f-c902-4bcb-8a51-d30c2d49b46f"
+                  message:
+                    type: string
+                    example: "Session initialized successfully"
+
+  /exercises:
+    get:
+      summary: List Exercise Catalog
+      description: Returns all exercise definitions in the library catalog for the active session workspace.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      responses:
+        '200':
+          description: List of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exercise'
+
+    post:
+      summary: Create Exercise
+      description: Creates a new exercise definition starting at Version 1.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Barbell Back Squat"
+                category:
+                  type: string
+                  example: "Legs"
+                description:
+                  type: string
+                  example: "Barbell across upper back, squat down keeping knees aligned."
+      responses:
+        '201':
+          description: Exercise created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+
+    put:
+      summary: Update Exercise (Bumps Version)
+      description: Updates an exercise definition, creating an immutable new version (v+1).
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                category:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Exercise updated with version bump
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+
+    delete:
+      summary: Soft-Delete Exercise
+      description: Soft-deletes or restores an exercise by toggling its IsRemoved state.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exercise soft-deleted state toggled
+
+  /workouts:
+    get:
+      summary: List Workout Routine Templates
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      responses:
+        '200':
+          description: List of workout routine templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workout'
+
+    post:
+      summary: Create Workout Routine Template
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workout'
+      responses:
+        '201':
+          description: Routine template created
+
+    put:
+      summary: Update Workout Routine Template
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workout'
+      responses:
+        '200':
+          description: Routine template updated
+
+    delete:
+      summary: Delete Workout Routine Template
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Routine deleted
+
+  /workouts/copy:
+    post:
+      summary: Duplicate Workout Routine Template
+      description: Deep-copies an existing Workout Routine template by ID with fresh UUIDs.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workoutId
+              properties:
+                workoutId:
+                  type: string
+      responses:
+        '201':
+          description: Routine template duplicated with fresh UUIDs
+
+  /plans:
+    get:
+      summary: List Training Plans
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      responses:
+        '200':
+          description: List of training plans
+
+    post:
+      summary: Create Training Plan
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+      responses:
+        '201':
+          description: Training plan created
+
+    put:
+      summary: Update Plan Workout Execution Status
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId:
+                  type: string
+                workoutId:
+                  type: string
+                isExecuted:
+                  type: boolean
+      responses:
+        '200':
+          description: Workout execution status updated
+
+  /plans/copy:
+    post:
+      summary: Duplicate Training Plan
+      description: Deep-copies an existing Training Plan with fresh UUIDs for all scheduled workouts.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planId
+              properties:
+                planId:
+                  type: string
+      responses:
+        '201':
+          description: Plan duplicated
+
+  /history:
+    get:
+      summary: List Completed Workout History Logs
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      responses:
+        '200':
+          description: List of completed workout logs
+
+    post:
+      summary: Record Completed Live Workout Log
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoricWorkouts'
+      responses:
+        '201':
+          description: Workout history logged
+
+  /vault/upload:
+    post:
+      summary: Import Session Vault File
+      description: Imports an uploaded JSON vault bundle into the workspace session.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Vault imported successfully
+
+  /vault/export:
+    get:
+      summary: Export Session Vault File
+      description: Exports a downloadable JSON bundle snapshot of the active workspace session.
+      parameters:
+        - $ref: '#/components/parameters/SessionHeader'
+      responses:
+        '200':
+          description: JSON vault bundle file
+
+components:
+  parameters:
+    SessionHeader:
+      name: X-Session-ID
+      in: header
+      required: false
+      description: Unique Workspace Session UUID
+      schema:
+        type: string
+        example: "8b757e0f-c902-4bcb-8a51-d30c2d49b46f"
+
+  schemas:
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+          example: 1
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        isRemoved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Set:
+      type: object
+      properties:
+        id:
+          type: string
+        setType:
+          type: string
+          enum: [reps, timed]
+        repCount:
+          type: integer
+        durationSeconds:
+          type: integer
+        weight:
+          type: number
+        perceivedEffort:
+          type: number
+        isCompleted:
+          type: boolean
+
+    Workout:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        datePlanned:
+          type: string
+          format: date-time
+        isExecuted:
+          type: boolean
+        exercises:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              exerciseId:
+                type: string
+              exerciseVersion:
+                type: integer
+              nameSnapshot:
+                type: string
+              sets:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Set'
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        datePlanned:
+          type: string
+          format: date-time
+        workouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workout'
+
+    HistoricWorkouts:
+      type: object
+      properties:
+        id:
+          type: string
+        workoutId:
+          type: string
+        planId:
+          type: string
+        workoutName:
+          type: string
+        dateCompleted:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        totalVolumeLbs:
+          type: number
+        workoutSnapshot:
+          $ref: '#/components/schemas/Workout'

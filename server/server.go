@@ -63,6 +63,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/history", wrap(s.handleHistory))
 	mux.HandleFunc("/api/vault/upload", wrap(s.handleUpload))
 	mux.HandleFunc("/api/vault/export", wrap(s.handleExport))
+	mux.HandleFunc("/api/docs/openapi.yaml", wrap(s.handleOpenAPI))
 
 	// Static Web Client File Server (with Cache-Control prevention for active development)
 	if s.WebDir != "" {

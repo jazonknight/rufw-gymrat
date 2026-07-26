@@ -165,6 +165,7 @@ All REST endpoints accept an optional header `X-Session-ID` (or query param `ses
 | `POST` | `/api/history` | Record a completed live workout session log (duration, actual reps/weights, total volume). |
 | `POST` | `/api/vault/upload` | Import/upload a combined session JSON vault file. |
 | `GET` | `/api/vault/export` | Export and download the active session snapshot as a JSON bundle file. |
+| `GET` | `/api/docs/openapi.yaml` | Serve raw OpenAPI 3.0.3 specification YAML file for API documentation & SDK generation. |
 
 ---
 
