@@ -132,17 +132,8 @@ Run GymRat in terminal menu mode (no web server required):
 go run main.go
 ```
 
----
 
-### 5. Deploy via Docker / Synology Container Manager 🐳
-
-#### Option A: Docker Compose Command
-```bash
-docker compose up -d --build
-```
-
-
-### 6. Publish Multi-Arch Image to Docker Hub
+### 5. Publish Multi-Arch Image to Docker Hub
 Build and publish multi-platform Docker images (`linux/amd64`, `linux/arm64`) to Docker Hub:
 ```bash
 ./scripts/publish_docker.sh
