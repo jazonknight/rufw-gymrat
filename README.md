@@ -141,40 +141,6 @@ go run main.go
 docker compose up -d --build
 ```
 
-#### Option B: Synology Container Manager (DSM 7.2+)
-In Synology Container Manager ➔ **Project** ➔ **Create**:
-
-```yaml
-version: '3.8'
-
-services:
-  gymrat:
-    image: jazonknight/rufw-gymrat:latest
-    container_name: gymrat-app
-    pull_policy: always
-    restart: unless-stopped
-    ports:
-      - "9876:8080" # Host Port 9876 -> Container Port 8080
-    environment:
-      - SERVER_MODE=true
-      - PORT=8080
-      - STORAGE_MODE=memory
-      - MAX_PAYLOAD_MB=5
-      - SESSIONS_DIR=/app/data/sessions
-      - WEB_DIR=/app/web
-    volumes:
-      - /volume1/docker/gymrat/data:/app/data
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/exercises"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-```
-
-Local Synology Access: 👉 **`http://<YOUR-SYNOLOGY-NAS-IP>:9876`**
-
----
 
 ### 6. Publish Multi-Arch Image to Docker Hub
 Build and publish multi-platform Docker images (`linux/amd64`, `linux/arm64`) to Docker Hub:
