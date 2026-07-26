@@ -16,19 +16,21 @@ import (
 // Server configures and runs the HTTP server instance.
 type Server struct {
 	SessionMgr   *storage.SessionManager // Workspace session manager
-	WebDir       string                  // Path to static web UI files
+	WebDir       string                  // Optional path to static web UI files on disk
+	WebFS        http.FileSystem         // Immutable embedded virtual filesystem for static assets
 	Port         string                  // TCP port to listen on
 	MaxPayloadMB int                     // Max upload request payload size in MB
 }
 
 // NewServer initializes a new REST API Server.
-func NewServer(sm *storage.SessionManager, webDir string, port string, maxPayloadMB int) *Server {
+func NewServer(sm *storage.SessionManager, webDir string, webFS http.FileSystem, port string, maxPayloadMB int) *Server {
 	if maxPayloadMB <= 0 {
 		maxPayloadMB = 5 // Default 5 MB payload limit
 	}
 	return &Server{
 		SessionMgr:   sm,
 		WebDir:       webDir,
+		WebFS:        webFS,
 		Port:         port,
 		MaxPayloadMB: maxPayloadMB,
 	}
@@ -65,9 +67,15 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/vault/export", wrap(s.handleExport))
 	mux.HandleFunc("/api/docs/openapi.yaml", wrap(s.handleOpenAPI))
 
-	// Static Web Client File Server (with Cache-Control prevention for active development)
-	if s.WebDir != "" {
-		fileServer := http.FileServer(http.Dir(s.WebDir))
+	// Static Web Client File Server (prefers embedded WebFS if provided, falls back to disk WebDir)
+	var fileServer http.Handler
+	if s.WebFS != nil {
+		fileServer = http.FileServer(s.WebFS)
+	} else if s.WebDir != "" {
+		fileServer = http.FileServer(http.Dir(s.WebDir))
+	}
+
+	if fileServer != nil {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")

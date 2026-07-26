@@ -3,8 +3,11 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
+	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +17,9 @@ import (
 	"gymrat/server"
 	"gymrat/storage"
 )
+
+//go:embed web/*
+var embeddedWebFS embed.FS
 
 func getEnv(key string, defaultValue string) string {
 	if val := os.Getenv(key); val != "" {
@@ -25,7 +31,7 @@ func getEnv(key string, defaultValue string) string {
 func main() {
 	defaultPort := getEnv("PORT", "8080")
 	defaultSessionDir := getEnv("SESSIONS_DIR", filepath.Join(".", "data", "sessions"))
-	defaultWebDir := getEnv("WEB_DIR", filepath.Join(".", "web"))
+	defaultWebDir := getEnv("WEB_DIR", "")
 	defaultStorageMode := getEnv("STORAGE_MODE", "memory")
 	defaultSeedFile := getEnv("SEED_FILE", filepath.Join("storage", storage.DefaultSeedFilename))
 	defaultMaxPayloadMB := 5
@@ -39,7 +45,7 @@ func main() {
 	serverMode := flag.Bool("server", defaultServerMode, "Start GymRat REST API Server & Web UI")
 	port := flag.String("port", defaultPort, "Port for REST API Server")
 	sessionDir := flag.String("sessions-dir", defaultSessionDir, "Base directory for sessions")
-	webDir := flag.String("web-dir", defaultWebDir, "Directory containing static web assets")
+	webDir := flag.String("web-dir", defaultWebDir, "Optional disk directory for static web assets (defaults to embedded FS)")
 	storageMode := flag.String("storage-mode", defaultStorageMode, "Session storage mode ('memory' or 'disk')")
 	seedFile := flag.String("seed-file", defaultSeedFile, "Path to immutable default exercises JSON seed file")
 	maxPayloadMB := flag.Int("max-payload-mb", defaultMaxPayloadMB, "Max upload request payload size in MB")
@@ -58,7 +64,18 @@ func main() {
 	}
 
 	if *serverMode {
-		srv := server.NewServer(sessionMgr, *webDir, *port, *maxPayloadMB)
+		var webFS http.FileSystem
+		if *webDir == "" {
+			// Sub-filesystem to strip "web" prefix for embedded asset routing
+			if sub, err := fs.Sub(embeddedWebFS, "web"); err == nil {
+				webFS = http.FS(sub)
+				fmt.Println("[GymRat Web Client] Serving static web UI from embedded binary FS (Immutable & Tamper-Proof)")
+			}
+		} else {
+			fmt.Printf("[GymRat Web Client] Serving static web UI from disk directory: %s\n", *webDir)
+		}
+
+		srv := server.NewServer(sessionMgr, *webDir, webFS, *port, *maxPayloadMB)
 		if err := srv.Start(); err != nil {
 			fmt.Printf("Server Error: %v\n", err)
 			os.Exit(1)

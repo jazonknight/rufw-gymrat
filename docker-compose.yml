@@ -14,7 +14,6 @@ services:
       - SERVER_MODE=true
       - PORT=8080
       - SESSIONS_DIR=/app/data/sessions
-      - WEB_DIR=/app/web
       - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
     volumes:
       # Optional persistence directory when running in disk storage mode

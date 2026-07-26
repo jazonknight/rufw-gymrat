@@ -33,8 +33,7 @@ RUN mkdir -p /app/data/sessions
 # Default Environment Variables
 ENV SERVER_MODE=true \
     PORT=8080 \
-    SESSIONS_DIR=/app/data/sessions \
-    WEB_DIR=/app/web
+    SESSIONS_DIR=/app/data/sessions
 
 # Expose server port
 EXPOSE 8080
