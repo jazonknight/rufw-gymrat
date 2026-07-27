@@ -4,7 +4,7 @@
  */
 
 export const API_BASE = '/api';
-export const APP_VERSION = 'v2.0.5';
+export const APP_VERSION = 'v2.0.7';
 
 export const state = {
   activeSessionId: localStorage.getItem('gymrat_session_id') || '',

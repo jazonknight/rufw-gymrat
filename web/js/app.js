@@ -3,8 +3,8 @@
  * Initializes navigation tabs, modals, file upload dropzone, version badge, and session bootstrap.
  */
 
-import { state, APP_VERSION, updateSessionUI } from './state.js';
-import { API_BASE, createNewSession, loadDashboardData, fetchExercises, fetchWorkouts, fetchPlans, exportVault } from './api.js';
+import { state, APP_VERSION, API_BASE, updateSessionUI } from './state.js';
+import { createNewSession, loadDashboardData, fetchExercises, fetchWorkouts, fetchPlans, exportVault } from './api.js';
 import { initFilters, renderCatalog } from './components/catalog.js';
 import { addRoutineExerciseStep } from './components/routines.js';
 import { addPlanScheduleStep } from './components/plans.js';

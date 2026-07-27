@@ -9,24 +9,41 @@ import { renderRoutines } from './components/routines.js';
 import { renderPlans } from './components/plans.js';
 import { renderHistory } from './components/history.js';
 
+let isCreatingSession = false;
+
 /**
  * Creates a fresh workspace session on the server and loads initial data.
  */
 export async function createNewSession() {
+  if (isCreatingSession) return;
+  isCreatingSession = true;
+
   try {
     const el = document.getElementById('active-session-id');
     if (el) el.textContent = 'Creating...';
 
+    localStorage.removeItem('gymrat_session_id');
+    state.activeSessionId = '';
+
     const res = await fetch(`${API_BASE}/session/new`, { method: 'POST' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+
     state.activeSessionId = data.sessionId;
     localStorage.setItem('gymrat_session_id', state.activeSessionId);
     updateSessionUI(state.activeSessionId);
-    await loadDashboardData();
+    
+    // Load dashboard data for the new session ID
+    await fetchExercises(true);
+    await fetchWorkouts(true);
+    await fetchPlans(true);
+    await fetchHistory(true);
   } catch (err) {
     console.error('Failed to create new session:', err);
     const el = document.getElementById('active-session-id');
     if (el) el.textContent = 'Error Connecting';
+  } finally {
+    isCreatingSession = false;
   }
 }
 
@@ -40,12 +57,12 @@ export async function loadDashboardData() {
   await fetchHistory();
 }
 
-export async function fetchExercises() {
+export async function fetchExercises(skipAutoHeal = false) {
   try {
     const res = await fetch(`${API_BASE}/exercises`, {
       headers: { 'X-Session-ID': state.activeSessionId }
     });
-    if (!res.ok) {
+    if (!res.ok && !skipAutoHeal) {
       console.warn('Invalid session response, initializing new session...');
       await createNewSession();
       return;

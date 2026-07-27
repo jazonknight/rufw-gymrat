@@ -3,8 +3,8 @@
  * Manages live session elapsed timer, stateful set completion tracking, real-time per-set weight/rep input sync, set/exercise removal, and history submission.
  */
 
-import { state, escapeHtml } from '../state.js';
-import { API_BASE, toggleWorkoutExecuted, loadDashboardData } from '../api.js';
+import { state, escapeHtml, API_BASE } from '../state.js';
+import { toggleWorkoutExecuted, loadDashboardData } from '../api.js';
 
 export function startLiveWorkout(planId, workoutId) {
   const plan = state.workoutPlans.find(p => p.id === planId);
